@@ -81,7 +81,7 @@ class PdfService {
     if (normalizedInput === "concessaotr" || 
         normalizedInput === "concessaotr2" ||
         normalizedInput === "renovacaotr" ||
-        normalizedInput === "cplpadulto" ||
+        normalizedInput === "cplpmaiores" ||
         normalizedInput === "reagrupamentopaimae") {
       console.log(`PDFService: Processo NÃO é de menor: "${processType}"`);
       return false;
