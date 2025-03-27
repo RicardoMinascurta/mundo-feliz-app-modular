@@ -1,0 +1,87 @@
+.processos-salvos {
+  padding: 1rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.processos-salvos h2 {
+  color: var(--text-color);
+  margin-bottom: 1.5rem;
+  font-size: 1.5rem;
+}
+
+.processos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+.processo-card {
+  background: #fff;
+  border-radius: var(--border-radius);
+  padding: 1rem;
+  box-shadow: var(--shadow);
+  transition: transform 0.2s;
+}
+
+.processo-card:hover {
+  transform: translateY(-2px);
+}
+
+.processo-header {
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--light-gray);
+}
+
+.processo-header h3 {
+  color: var(--primary-color);
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.processo-dados, .processo-documentos {
+  margin-top: 1rem;
+}
+
+.processo-dados h4, .processo-documentos h4 {
+  color: var(--text-color);
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.processo-dados ul, .processo-documentos ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.processo-dados li, .processo-documentos li {
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--dark-gray);
+}
+
+.processo-documentos a {
+  color: var(--primary-color);
+  text-decoration: none;
+}
+
+.processo-documentos a:hover {
+  text-decoration: underline;
+}
+
+.loading, .error, .no-data {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-color);
+}
+
+.error {
+  color: var(--error-color);
+}
+
+.no-data {
+  color: var(--dark-gray);
+  font-style: italic;
+} 

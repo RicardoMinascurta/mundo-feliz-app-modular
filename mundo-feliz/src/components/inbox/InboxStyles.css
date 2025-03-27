@@ -1,0 +1,221 @@
+/* Estilos para a página de Inbox */
+
+.inbox-container {
+  width: 100%;
+  max-width: 100%;
+  padding: 1.5rem;
+  background-color: #FFFFFF;
+  min-height: 100vh;
+}
+
+.inbox-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #EEEEEE;
+}
+
+.inbox-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #333333;
+  margin: 0;
+}
+
+.refresh-button {
+  color: #4F46E5;
+  background-color: #F3F4F6;
+  border-radius: 8px;
+  padding: 8px;
+  transition: all 0.2s ease-in-out;
+}
+
+.refresh-button:hover {
+  background-color: #E5E7EB;
+}
+
+.refresh-button:disabled {
+  color: #9CA3AF;
+  background-color: #F3F4F6;
+}
+
+.refresh-icon {
+  font-size: 1.2rem;
+}
+
+.refresh-icon.rotating {
+  animation: rotate 1s linear infinite;
+}
+
+@keyframes rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.search-container {
+  margin-bottom: 1.5rem;
+}
+
+/* Redução na altura e modernização da barra de pesquisa */
+.search-input {
+  font-size: 0.95rem;
+  background-color: #FFFFFF;
+  border-radius: 12px !important;
+  height: 2.5rem;
+}
+
+.search-input .MuiOutlinedInput-root {
+  height: 2.5rem;
+  border-radius: 12px;
+}
+
+.search-input .MuiOutlinedInput-input {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+.search-input .MuiInputAdornment-root {
+  height: 2.5rem;
+}
+
+.table-container {
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  background-color: #FFFFFF;
+  border: 1px solid #EEEEEE;
+}
+
+.table-header {
+  background-color: #F8F9FA;
+  font-weight: 600;
+  color: #555555;
+  font-size: 0.9rem;
+  padding: 1rem;
+  border-bottom: 2px solid #EEEEEE;
+}
+
+.table-row {
+  transition: background-color 0.2s ease-in-out;
+}
+
+.table-row:hover {
+  background-color: #F8F9FA;
+  cursor: pointer;
+}
+
+.table-cell {
+  padding: 1rem;
+  border-bottom: 1px solid #EEEEEE;
+  color: #333333;
+  font-size: 0.95rem;
+}
+
+.nome-cell {
+  font-weight: 500;
+  max-width: 300px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tipo-container {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.categoria-badge {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  border-radius: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.03rem;
+  color: #FFFFFF;
+  width: fit-content;
+  white-space: nowrap;
+}
+
+/* Cores para cada categoria */
+.categoria-badge.renovação {
+  background-color: #4F46E5; /* Roxo/índigo */
+}
+
+.categoria-badge.concessão {
+  background-color: #059669; /* Verde esmeralda */
+}
+
+.categoria-badge.cplp {
+  background-color: #D97706; /* Âmbar */
+}
+
+.categoria-badge.informação {
+  background-color: #0891B2; /* Ciano */
+}
+
+.categoria-badge.contagem-de-tempo {
+  background-color: #DB2777; /* Rosa */
+}
+
+.tipo-texto {
+  font-size: 0.85rem;
+  color: #666666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.data-cell {
+  color: #555555;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.estado-badge {
+  display: inline-block;
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  text-transform: capitalize;
+}
+
+.estado-badge.pendente {
+  background-color: #FEF3C7;
+  color: #92400E;
+}
+
+.estado-badge.enviado {
+  background-color: #DCFCE7;
+  color: #166534;
+}
+
+/* Responsividade para dispositivos móveis */
+@media (max-width: 768px) {
+  .inbox-container {
+    padding: 1rem;
+  }
+  
+  .table-cell {
+    padding: 0.75rem;
+  }
+  
+  .nome-cell {
+    max-width: 150px;
+  }
+}
+
+/* Animação suave para a tabela ao carregar */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.table-container {
+  animation: fadeIn 0.3s ease-in-out;
+} 

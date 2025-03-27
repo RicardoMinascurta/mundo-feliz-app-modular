@@ -1,0 +1,352 @@
+/* Estilo global minimalista */
+:root {
+  --primary-color: #3498db;
+  --light-gray: #f5f7fa;
+  --medium-gray: #e1e5eb;
+  --dark-gray: #697384;
+  --text-color: #333;
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --border-radius: 8px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  background-color: #fff;
+  color: var(--text-color);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+.app-header {
+  background-color: var(--primary-color);
+  color: white;
+  padding: 1rem;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  width: 100%;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 1.75rem;
+}
+
+.app-content {
+  flex: 1;
+  padding: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+.content-wrapper {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.app-footer {
+  background-color: var(--text-color);
+  color: white;
+  text-align: center;
+  padding: 1rem;
+  font-size: 0.9rem;
+  width: 100%;
+}
+
+button {
+  border: none;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+button:active {
+  transform: translateY(1px);
+}
+
+a {
+  color: var(--primary-color);
+  text-decoration: none;
+}
+
+/* Media queries para responsividade */
+@media (max-width: 768px) {
+  .app-header h1 {
+    font-size: 1.5rem;
+  }
+  
+  .app-content {
+    padding: 0;
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-header {
+    padding: 0.75rem;
+  }
+  
+  .app-header h1 {
+    font-size: 1.25rem;
+  }
+  
+  .app-footer {
+    padding: 0.75rem;
+    font-size: 0.8rem;
+  }
+}
+
+/* Normalização de elementos de formulário para consistência entre navegadores */
+input, 
+button, 
+textarea, 
+select {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+input {
+  background-color: #ffffff;
+  color: var(--text-color);
+  border: 1px solid var(--medium-gray);
+  border-radius: var(--border-radius);
+}
+
+/* Manter o conteúdo legível em modo escuro do navegador */
+@media (prefers-color-scheme: dark) {
+  input, 
+  textarea, 
+  select {
+    background-color: #ffffff !important;
+    color: var(--text-color) !important;
+  }
+}
+
+/* Estilos para o editor de email tipo Gmail */
+[contenteditable] {
+  outline: none;
+  cursor: text;
+  min-height: 20px;
+}
+
+[contenteditable]:focus {
+  outline: none;
+  background-color: #f8f9fa;
+}
+
+/* Estilos para tabela SEF */
+.sef-table {
+  border-collapse: collapse !important;
+  -webkit-border-collapse: collapse !important;
+  width: 85% !important;
+  max-width: 700px !important;
+  margin: 20px 0 !important;
+  border: 2px solid #000 !important;
+  -webkit-border: 2px solid #000 !important;
+  outline: 2px solid #000 !important;
+  -webkit-box-shadow: 0 0 0 1px #000 !important;
+}
+
+.sef-table td {
+  border: 1px solid #000 !important;
+  -webkit-border: 1px solid #000 !important;
+  padding: 8px !important;
+  vertical-align: top !important;
+}
+
+.header-cell {
+  background-color: rgb(220, 230, 245) !important;
+  text-align: center !important;
+  font-weight: bold !important;
+  border-top: 2px solid #000 !important;
+  border-left: 2px solid #000 !important;
+  border-right: 2px solid #000 !important;
+  border-bottom: 1px solid #000 !important;
+  -webkit-border-top: 2px solid #000 !important;
+  -webkit-border-left: 2px solid #000 !important;
+  -webkit-border-right: 2px solid #000 !important;
+  -webkit-border-bottom: 1px solid #000 !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 8px !important;
+}
+
+.left-column {
+  width: 35% !important;
+  border-left: 2px solid #000 !important;
+  border-right: 1px solid #000 !important;
+  border-bottom: 1px solid #000 !important;
+  -webkit-border-left: 2px solid #000 !important;
+  -webkit-border-right: 1px solid #000 !important;
+  -webkit-border-bottom: 1px solid #000 !important;
+}
+
+.right-column {
+  width: 65% !important;
+  border-right: 2px solid #000 !important;
+  border-bottom: 1px solid #000 !important;
+  min-height: 25px !important;
+  -webkit-border-right: 2px solid #000 !important;
+  -webkit-border-bottom: 1px solid #000 !important;
+}
+
+.right-column[contenteditable="true"] {
+  cursor: text !important;
+  -webkit-user-modify: read-write !important;
+}
+
+.bottom-left {
+  width: 35% !important;
+  border-left: 2px solid #000 !important;
+  border-bottom: 2px solid #000 !important;
+  border-right: 1px solid #000 !important;
+  -webkit-border-left: 2px solid #000 !important;
+  -webkit-border-bottom: 2px solid #000 !important;
+  -webkit-border-right: 1px solid #000 !important;
+}
+
+.bottom-right {
+  width: 65% !important;
+  border-right: 2px solid #000 !important;
+  border-bottom: 2px solid #000 !important;
+  min-height: 60px !important;
+  -webkit-border-right: 2px solid #000 !important;
+  -webkit-border-bottom: 2px solid #000 !important;
+}
+
+.motivo-local-data {
+  text-align: right !important;
+  padding-right: 10px !important;
+}
+
+/* Estilo para células com foco */
+[contenteditable="true"]:focus {
+  background-color: #f8f9fa !important;
+  outline: none !important;
+  -webkit-box-shadow: inset 0 0 0 1px #ddd !important;
+}
+
+/* Destaca célula ativa */
+.active-cell {
+  background-color: #f5f5f5 !important;
+  outline: 2px solid #3498db !important;
+  -webkit-box-shadow: inset 0 0 0 1px #3498db !important;
+}
+
+/* Fix para Chrome */
+@media screen and (-webkit-min-device-pixel-ratio:0) {
+  .sef-table {
+    border: 2px solid #000 !important;
+    outline: 2px solid #000 !important;
+    box-shadow: 0 0 0 1px #000 !important;
+    border-spacing: 0 !important;
+    border-collapse: collapse !important;
+    width: 85% !important;
+    max-width: 700px !important;
+    table-layout: fixed !important;
+    overflow: hidden !important;
+    margin: 20px 0 !important;
+    padding: 0 !important;
+  }
+  
+  .sef-table td {
+    border: 1px solid #000 !important;
+    position: relative !important;
+    margin: 0 !important;
+    padding: 8px !important;
+    box-sizing: border-box !important;
+  }
+  
+  /* Forçar exibição de bordas horizontais */
+  .sef-table tr td {
+    border-top: 1px solid #000 !important;
+    border-bottom: 1px solid #000 !important;
+  }
+  
+  /* Forçar exibição de bordas verticais com apenas uma linha */
+  .sef-table td.left-column {
+    background-color: #f2f2f2 !important;
+    font-weight: bold !important;
+    border-right: 1px solid #000 !important;
+    border-left: 2px solid #000 !important;
+    width: 35% !important;
+  }
+  
+  .sef-table td.right-column {
+    border-left: 1px solid #000 !important;
+    border-right: 2px solid #000 !important;
+    width: 65% !important;
+  }
+  
+  /* Garantir que as células azuis do cabeçalho preencham corretamente */
+  .header-cell {
+    border-top: 2px solid #000 !important;
+    border-left: 2px solid #000 !important;
+    border-right: 2px solid #000 !important;
+    background-color: rgb(220, 230, 245) !important;
+    text-align: center !important;
+    font-weight: bold !important;
+    width: 100% !important;
+    padding: 8px !important;
+    margin: 0 !important;
+    display: table-cell !important;
+    box-sizing: border-box !important;
+  }
+  
+  /* Garantir que todos os cantos da tabela fiquem corretos */
+  .sef-table tr:first-child td {
+    border-top: 2px solid #000 !important;
+  }
+  
+  .sef-table tr:last-child td {
+    border-bottom: 2px solid #000 !important;
+  }
+  
+  .sef-table tr td:first-child {
+    border-left: 2px solid #000 !important;
+  }
+  
+  .sef-table tr td:last-child {
+    border-right: 2px solid #000 !important;
+  }
+  
+  /* Garantir bordas duplas nas extremidades */
+  .bottom-left, .bottom-right {
+    border-bottom: 2px solid #000 !important;
+  }
+} 

@@ -1,0 +1,138 @@
+/* EditorSimples.css */
+.editor-simples {
+  width: 100%;
+  max-width: 100%;
+  min-height: 450px;
+  padding: 15px;
+  margin: 0 auto;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  font-family: Arial, sans-serif;
+  background-color: white;
+  overflow: auto;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: #000000 !important;
+}
+
+.editor-simples:focus {
+  outline: none;
+  border-color: #4a90e2;
+}
+
+/* Estilos para garantir consistência entre navegadores */
+.editor-simples table {
+  border-collapse: collapse;
+  width: 440px;
+  max-width: 440px;
+  table-layout: fixed;
+  margin: 0;
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  color: #000000 !important;
+}
+
+/* Estilo específico para tabela do template de estudante */
+.editor-simples table[data-template="estudante"] {
+  width: 462px !important;
+  max-width: 462px !important;
+}
+
+.editor-simples td {
+  border: 1px solid #000;
+  padding: 5px;
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  word-wrap: break-word;
+  font-size: 10pt;
+  color: #000000 !important;
+  text-align: left;
+  height: 95%;
+}
+
+/* Normalize margins for different browsers */
+.editor-simples p {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+  color: #000000 !important;
+}
+
+/* Força o Chrome a respeitar os tamanhos de célula */
+.editor-simples td:first-child {
+  width: 30%;
+  text-align: left;
+}
+
+/* Correção para garantir que o Edge e Chrome mostrem as células da mesma altura */
+.editor-simples tr {
+  height: auto !important;
+  color: #000000 !important;
+}
+
+/* Ajuste para altura das linhas mais compacta como no email */
+.editor-simples tr:not(:first-child):not(:nth-last-child(-n+2)) {
+  height: 19px !important;
+  color: #000000 !important;
+}
+
+/* A área de observações deve ter altura maior */
+.editor-simples tr:nth-last-child(3) td:last-child {
+  height: 57px !important;
+  color: #000000 !important;
+}
+
+/* As observações do SEF/CC devem ter altura média */
+.editor-simples tr:last-child td:last-child {
+  height: 38px !important;
+  color: #000000 !important;
+}
+
+/* Melhorias para o editor no Chrome/Edge */
+.editor-simples::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.editor-simples::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.editor-simples::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+/* Força o texto alinhado a direita para todos navegadores */
+.editor-simples [style*="text-align: right"] {
+  text-align: right !important;
+  color: #000000 !important;
+}
+
+/* Força texto normal a ser alinhado à esquerda */
+.editor-simples [style*="text-align: left"], 
+.editor-simples td:not([style*="text-align"]) {
+  text-align: left !important;
+}
+
+/* Garante que o background-color seja respeitado em todos navegadores */
+.editor-simples [style*="background-color"] {
+  background-color: inherit !important;
+}
+
+/* Cabeçalho azul deve ser sempre respeitado */
+.editor-simples tr:first-child td {
+  background-color: #d4e5f7 !important;
+  padding: 3px !important;
+  height: 21px !important;
+  color: #000000 !important;
+  font-weight: bold !important;
+}
+
+/* Todas as outras células devem ser brancas */
+.editor-simples tr:not(:first-child) td {
+  background-color: white !important;
+  color: #000000 !important;
+} 

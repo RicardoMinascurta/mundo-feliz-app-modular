@@ -1,0 +1,236 @@
+/* Estilos para a página de detalhes do processo */
+
+.processo-detalhes-container {
+  width: 100%;
+  max-width: 100%;
+  padding: 1rem;
+  background-color: #F5F7FA;
+  min-height: 100vh;
+}
+
+.processo-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #E0E0E0;
+}
+
+.voltar-button {
+  margin-right: 1rem;
+  color: #555555;
+  background-color: #EEEEEE;
+  border-radius: 50%;
+}
+
+.processo-titulo {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #333333;
+  margin: 0;
+}
+
+.processo-content {
+  display: flex;
+  flex-wrap: wrap;
+  margin-bottom: 2rem;
+  width: 100%;
+}
+
+.painel {
+  height: calc(100vh - 150px);
+  overflow: auto;
+  padding: 1rem;
+  border-radius: 8px;
+  background-color: #FFFFFF;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  border: 1px solid #EEEEEE;
+  width: 100%;
+}
+
+.painel-titulo {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #333333;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #EEEEEE;
+}
+
+/* Estilos para o visualizador de PDF */
+.pdf-panel {
+  width: 40% !important;
+  flex-basis: 40% !important;
+  max-width: 40% !important;
+  display: flex;
+  flex-direction: column;
+  padding-right: 0 !important;
+}
+
+.pdf-viewer-container {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  height: 100%;
+  width: 100%;
+}
+
+.pdf-controls {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.5rem;
+}
+
+.pdf-frame-container {
+  position: relative;
+  flex-grow: 1;
+  min-height: 300px;
+  border: 1px solid #E0E0E0;
+  border-radius: 8px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.pdf-frame {
+  width: 100%;
+  height: 100%;
+  border: none;
+  min-height: calc(100vh - 220px);
+}
+
+.pdf-loading, .pdf-error, .pdf-no-document {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(255, 255, 255, 0.9);
+  padding: 1rem;
+  text-align: center;
+}
+
+/* Estilos para o formulário de detalhes simplificado */
+.formulario-panel {
+  width: 15% !important;
+  flex-basis: 15% !important;
+  max-width: 15% !important;
+  display: flex;
+  flex-direction: column;
+  padding-left: 8px !important;
+  padding-right: 8px !important;
+}
+
+.detalhes-formulario-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  font-size: 0.8rem;
+}
+
+/* Estilos para o formulário simplificado */
+.simplified-form {
+  padding: 0.3rem;
+  width: 100%;
+  font-size: 0.8rem;
+}
+
+.simplified-form .MuiFormControlLabel-root {
+  margin-bottom: -2px;
+  height: 26px;
+}
+
+.simplified-form .MuiCheckbox-root {
+  padding: 3px;
+}
+
+.form-field {
+  margin-bottom: 0.6rem;
+  width: 100%;
+}
+
+.field-label {
+  font-weight: 500;
+  color: #333333;
+  margin-bottom: 0.15rem;
+  display: block;
+  width: 100%;
+  font-size: 0.8rem;
+}
+
+.simple-input {
+  background-color: #FFFFFF;
+  width: 100%;
+  font-size: 0.8rem;
+}
+
+.save-button {
+  margin-top: 0.7rem;
+  padding: 0.3rem 1rem;
+  border-radius: 4px;
+  width: 100%;
+  font-size: 0.8rem;
+}
+
+/* Estilos para o email simplificado */
+.email-panel {
+  width: 45% !important;
+  flex-basis: 45% !important;
+  max-width: 45% !important;
+  display: flex;
+  flex-direction: column;
+  padding-left: 8px !important;
+}
+
+.simplified-email-form {
+  padding: 0.5rem;
+  width: 100%;
+}
+
+.email-field {
+  width: 100%;
+}
+
+.email-input, .message-input {
+  background-color: #FFFFFF;
+  width: 100%;
+}
+
+.switch-label {
+  margin: 0.5rem 0;
+  font-size: 0.9rem;
+  width: 100%;
+}
+
+/* Responsividade */
+@media (max-width: 960px) {
+  .processo-content {
+    flex-direction: column;
+  }
+  
+  .pdf-panel, .formulario-panel, .email-panel {
+    width: 100% !important;
+    flex-basis: 100% !important;
+    max-width: 100% !important;
+    margin-bottom: 1rem;
+    height: auto;
+    max-height: 500px;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+  
+  .pdf-frame {
+    min-height: 400px;
+  }
+}
+
+/* Mensagens de loading e error */
+.loading-message, .error-message {
+  text-align: center;
+  padding: 2rem;
+  font-size: 1.1rem;
+} 

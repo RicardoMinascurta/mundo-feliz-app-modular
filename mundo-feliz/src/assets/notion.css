@@ -1,0 +1,408 @@
+/* Estilos para a interface do Notion - Minimalista */
+
+/* Layout da tela */
+.notion-search-screen {
+  width: 100%;
+  max-width: 95%;
+  margin: 0.5rem auto;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.notion-search-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Componente de pesquisa */
+.notion-search-container {
+  width: 100%;
+  background-color: #fff;
+  border-radius: var(--border-radius);
+  box-shadow: none;
+  padding: 0.75rem;
+  margin: 0 auto;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.search-header h2 {
+  margin: 0 0 1rem 0;
+  font-size: 1.25rem;
+  color: var(--text-color);
+  font-weight: 500;
+}
+
+.search-input-container {
+  position: relative;
+  margin: 0 0 1rem 0;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.8rem 3rem 0.8rem 1rem;
+  border-radius: var(--border-radius);
+  border: 1px solid var(--medium-gray);
+  font-size: 1rem;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+  background-color: #ffffff;
+  color: var(--text-color);
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+}
+
+.clear-search-btn {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  color: var(--dark-gray);
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.loading-indicator, 
+.error-message {
+  margin: 1rem 0;
+  padding: 0.8rem;
+  border-radius: var(--border-radius);
+  text-align: center;
+}
+
+.loading-indicator {
+  background-color: var(--light-gray);
+  color: var(--dark-gray);
+}
+
+.error-message {
+  background-color: #fdd;
+  color: #c33;
+}
+
+/* Resultados da pesquisa */
+.results-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.result-item {
+  padding: 0.75rem;
+  border-radius: var(--border-radius);
+  margin-bottom: 0.5rem;
+  background-color: var(--light-gray);
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  width: 100%;
+  box-sizing: border-box;
+  word-break: break-word;
+}
+
+.result-item:hover {
+  background-color: var(--medium-gray);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
+}
+
+.result-name {
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+.result-path {
+  font-size: 0.85rem;
+  color: #6B7280;
+  font-style: italic;
+  margin-top: 4px;
+}
+
+/* Estilos para períodos válidos e desconhecidos */
+.valid-period {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background-color: rgba(52, 152, 219, 0.1);
+  color: #3498db !important;
+  border: 1px solid rgba(52, 152, 219, 0.3);
+  font-style: normal !important;
+  margin-top: 6px;
+}
+
+.unknown-period {
+  font-style: italic;
+  color: #999;
+}
+
+/* Lista de processos */
+.process-selection-panel {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.lista-processos-container {
+  background-color: var(--light-gray);
+  width: 100%;
+  min-height: 100vh;
+  padding: 1.5rem;
+  box-sizing: border-box;
+}
+
+.processos-header {
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.processos-header h2 {
+  margin: 0 0 1rem 0;
+  font-size: 1.25rem;
+  color: var(--text-color);
+  font-weight: 500;
+}
+
+.processos-header p {
+  color: var(--dark-gray);
+  margin-bottom: 0.5rem;
+}
+
+.categorias-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.categoria-card {
+  overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
+  margin-bottom: 12px;
+  border-radius: var(--border-radius);
+  background-color: transparent;
+}
+
+.categoria-header {
+  padding: 1rem;
+  color: var(--text-color);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #ffffff;
+  border: 1px solid var(--medium-gray);
+  border-radius: var(--border-radius);
+  transition: border-color 0.3s ease, background-color 0.3s ease;
+}
+
+.categoria-header.expanded {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  border: 1px solid var(--primary-color);
+  border-bottom: none;
+  background-color: #ffffff;
+  box-shadow: 0 0 0 1px rgba(53, 152, 219, 0.3);
+}
+
+.categoria-header:hover {
+  border-color: var(--dark-gray);
+  background-color: var(--light-gray);
+}
+
+.categoria-header.expanded:hover {
+  background-color: #ffffff;
+  border-color: var(--primary-color);
+}
+
+.categoria-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.categoria-header h3 svg {
+  flex-shrink: 0;
+}
+
+.categoria-header .toggle-icon {
+  transition: transform 0.25s ease;
+  color: var(--dark-gray);
+}
+
+.categoria-header .toggle-icon.rotate-180 {
+  transform: rotate(180deg);
+}
+
+.tipos-list {
+  padding: 0;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s cubic-bezier(0, 1, 0, 1);
+  opacity: 1;
+  background-color: #ffffff;
+  border-left: 1px solid var(--medium-gray);
+  border-right: 1px solid var(--medium-gray);
+  border-bottom-left-radius: var(--border-radius);
+  border-bottom-right-radius: var(--border-radius);
+  margin-top: -1px;
+}
+
+.tipos-list.expanded {
+  max-height: 800px;
+  padding: 0.75rem 0;
+  transition: max-height 0.5s ease-in-out;
+  border-bottom: 1px solid var(--medium-gray);
+  border-left: 1px solid var(--primary-color);
+  border-right: 1px solid var(--primary-color);
+  border-bottom: 1px solid var(--primary-color);
+  box-shadow: 0 0 0 1px rgba(53, 152, 219, 0.3);
+}
+
+.tipo-button {
+  width: 100%;
+  background-color: #ffffff;
+  border: none;
+  border-bottom: 1px solid var(--medium-gray);
+  border-radius: 0;
+  padding: 0.7rem 1.5rem;
+  text-align: left;
+  font-size: 0.95rem;
+  margin-bottom: 0;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.tipo-button:hover {
+  background-color: var(--light-gray);
+}
+
+.tipo-button:last-child {
+  margin-bottom: 0;
+  border-bottom: none;
+}
+
+.back-button {
+  display: block;
+  width: 100%;
+  max-width: 200px;
+  margin: 1rem auto;
+  padding: 0.8rem 1rem;
+  background-color: var(--light-gray);
+  border: none;
+  border-radius: var(--border-radius);
+  color: var(--text-color);
+  font-size: 0.9rem;
+  text-align: center;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.back-button:hover {
+  background-color: var(--medium-gray);
+}
+
+/* Responsividade para dispositivos móveis e tablets */
+@media (max-width: 768px) {
+  .notion-search-screen {
+    margin: 0 auto;
+    padding: 0;
+    width: 100%;
+    max-width: 100%;
+  }
+  
+  .notion-search-container {
+    padding: 0.5rem;
+    width: 100%;
+    box-shadow: none;
+  }
+  
+  .lista-processos-container {
+    padding: 0.5rem;
+    width: 100%;
+  }
+  
+  .categoria-header h3 {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .notion-search-screen {
+    padding: 0;
+    margin: 0 auto;
+    width: 100%;
+    max-width: 100%;
+  }
+  
+  .notion-search-container {
+    padding: 0.5rem;
+    width: 100%;
+    box-shadow: none;
+  }
+  
+  .search-input {
+    padding: 0.7rem;
+    font-size: 0.9rem;
+  }
+  
+  .processos-header h2 {
+    font-size: 1.1rem;
+  }
+  
+  .categoria-header {
+    padding: 0.8rem;
+  }
+  
+  .search-results h3 {
+    font-size: 1rem;
+  }
+  
+  .result-name {
+    font-size: 0.9rem;
+  }
+  
+  .result-path {
+    font-size: 0.8rem;
+  }
+}
+
+/* Regra global para inputs para garantir consistência entre navegadores */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="search"],
+input[type="tel"],
+input[type="url"],
+textarea,
+select {
+  background-color: #ffffff;
+  color: var(--text-color);
+  font-family: inherit;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+} 
