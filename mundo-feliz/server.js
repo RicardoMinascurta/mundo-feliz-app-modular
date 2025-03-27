@@ -289,7 +289,7 @@ const storage = multer.diskStorage({
       documentType?.toLowerCase().includes('assinatura') || 
       file.fieldname?.toLowerCase().includes('assinatura') ||
       req.originalUrl?.toLowerCase().includes('assinatura');
-      
+    
     // Verificar se é um PDF
     const isPdf = 
       documentType?.toLowerCase().includes('pdf') ||
@@ -617,14 +617,14 @@ app.post('/api/upload-documento-base64', async (req, res) => {
       temFilename: !!filename
     });
     console.log('- Content-Type:', req.get('Content-Type'));
-    
+      
     if (!processId || !documentType || !base64Data) {
       return res.status(400).json({
         success: false,
         error: 'processId, documentType e base64Data são obrigatórios'
       });
     }
-    
+
     console.log(`📤 API - Upload de documento base64: tipo=${documentType}, processId=${processId}`);
     console.log(`📄 Salvando arquivo para processId=${processId}, tipo=${documentType}, nome=${filename}`);
     
@@ -706,7 +706,7 @@ app.post('/api/upload-documento-base64', async (req, res) => {
       size: fileSize,
       name: filename || newFilename,
       documentType,
-      uploadedAt: new Date().toISOString()
+          uploadedAt: new Date().toISOString()
     });
     
     // Resposta de sucesso
@@ -2233,27 +2233,25 @@ app.get('/api/structure/:processId', (req, res) => {
 
 // Função auxiliar para obter processos do arquivo JSON
 function getProcessos() {
-  return new Promise((resolve, reject) => {
-    try {
-      const processosPath = path.join(DATA_DIR, 'processos.json');
-      
-      // Verificar se o arquivo existe
-      if (!fs.existsSync(processosPath)) {
-        console.log('Arquivo de processos não encontrado. Criando novo arquivo vazio.');
-        fs.writeFileSync(processosPath, '[]', 'utf8');
-        return resolve([]);
-      }
-      
-      // Ler o arquivo de processos
-      const processosData = fs.readFileSync(processosPath, 'utf8');
-      const processos = JSON.parse(processosData || '[]');
-      
-      resolve(processos);
-    } catch (error) {
-      console.error('Erro ao obter processos:', error);
-      reject(error);
+  try {
+    const processosPath = path.join(DATA_DIR, 'processos.json');
+    
+    // Verificar se o arquivo existe
+    if (!fs.existsSync(processosPath)) {
+      console.log('Arquivo de processos não encontrado. Criando novo arquivo vazio.');
+      fs.writeFileSync(processosPath, '[]', 'utf8');
+      return [];
     }
-  });
+    
+    // Ler o arquivo de processos
+    const processosData = fs.readFileSync(processosPath, 'utf8');
+    const processos = JSON.parse(processosData || '[]');
+    
+    return processos;
+  } catch (error) {
+    console.error('Erro ao obter processos:', error);
+    return [];
+  }
 }
 
 // Função para gerar PDF único para um processo
@@ -2266,7 +2264,7 @@ app.get('/api/pdf/generate/:processId', async (req, res) => {
     }
     
     // Obter dados do processo
-    const processos = await getProcessos();
+    const processos = getProcessos();
     const processo = processos.find(p => p.processId === processId);
     
     if (!processo) {
@@ -2587,6 +2585,109 @@ app.post('/api/upload-pdf', (req, res) => {
     res.status(500).json({
       success: false,
       error: `Erro ao salvar PDF: ${error.message}`
+    });
+  }
+}); 
+
+// Função para atualizar os dados do processo com informações de um novo arquivo
+function updateProcessoComArquivo(processId, fileInfo) {
+  try {
+    console.log(`📝 API - Atualizando processo ${processId} com novo arquivo: ${JSON.stringify(fileInfo)}`);
+    
+    // Obter todos os processos
+    const processos = getProcessos();
+    
+    // Encontrar o processo pelo ID
+    const processoIndex = processos.findIndex(p => p.processId === processId);
+    
+    if (processoIndex === -1) {
+      console.warn(`⚠️ API - Processo não encontrado para atualização: ${processId}`);
+      // Criar um novo processo se não existir
+      const novoProcesso = {
+        processId,
+        documentos: [fileInfo],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      processos.push(novoProcesso);
+      console.log(`✅ API - Novo processo criado com ID: ${processId}`);
+    } else {
+      // Processo encontrado, atualizar
+      if (!processos[processoIndex].documentos) {
+        processos[processoIndex].documentos = [];
+      }
+      
+      // Adicionar o novo arquivo à lista de documentos
+      processos[processoIndex].documentos.push(fileInfo);
+      processos[processoIndex].updatedAt = new Date().toISOString();
+      
+      console.log(`✅ API - Processo ${processId} atualizado com novo arquivo`);
+    }
+    
+    // Salvar de volta no arquivo
+    fs.writeFileSync(DATA_FILE, JSON.stringify(processos, null, 2));
+    return true;
+  } catch (error) {
+    console.error(`❌ API - Erro ao atualizar processo com arquivo: ${error.message}`);
+    return false;
+  }
+}
+
+// Endpoint para upload de documento via formulário comum
+app.post('/api/upload-documento', upload.single('documento'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        error: 'Nenhum arquivo enviado'
+      });
+    }
+    
+    // Obter informações do arquivo e processId
+    const { processId, documentType } = req.body;
+    const file = req.file;
+    
+    // Verificar se temos um processId
+    if (!processId) {
+      return res.status(400).json({
+        success: false,
+        error: 'processId é obrigatório'
+      });
+    }
+    
+    console.log(`📤 API - Upload de documento: tipo=${documentType || 'não especificado'}, processId=${processId}`);
+    console.log(`📄 API - Arquivo recebido: ${file.originalname}, tamanho: ${file.size} bytes`);
+    
+    // Obter o caminho relativo do arquivo (para armazenar no JSON)
+    const relativePath = path.relative(path.resolve('.'), file.path).replace(/\\/g, '/');
+    
+    // Determinar o tipo MIME baseado na extensão
+    let mimeType = file.mimetype || 'application/octet-stream';
+    
+    // Registrar o arquivo no processo
+    const fileInfo = {
+      path: relativePath,
+      type: mimeType,
+      size: file.size,
+      name: file.originalname,
+      documentType: documentType || path.basename(file.originalname, path.extname(file.originalname)),
+      uploadedAt: new Date().toISOString()
+    };
+    
+    // Atualizar o JSON do processo
+    updateProcessoComArquivo(processId, fileInfo);
+    
+    // Resposta de sucesso
+    res.json({
+      success: true,
+      file: fileInfo
+    });
+  } catch (error) {
+    console.error(`❌ API - Erro ao processar upload de documento: ${error.message}`, error);
+    res.status(500).json({
+      success: false,
+      error: error.message
     });
   }
 });
