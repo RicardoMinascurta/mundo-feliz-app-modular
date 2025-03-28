@@ -3,28 +3,34 @@
  */
 
 import { jsPDF } from 'jspdf';
-import { PDFDocument } from 'pdf-lib';
+import { PDFDocument, rgb } from 'pdf-lib';
 import { fileStorage } from './fileStorage.js';
 import { logger } from './LoggerService.js';
 import { jsonData } from './JsonDataService.js';
-import path from 'path';
 import fs from 'fs';
-import { rgb } from 'pdf-lib';
 
 // Caminhos para as declarações de consentimento
 const CONSENT_FORMS = {
-  ADULT: './public/consent.pdf', // Declaração para maiores de idade - caminho corrigido
-  MINOR: './public/pdf-menores.pdf' // Declaração para menores de idade - caminho corrigido
+  ADULT: 'consent.pdf', // Declaração para maiores de idade (URL relativa ao servidor)
+  MINOR: 'pdf-menores.pdf' // Declaração para menores de idade (URL relativa ao servidor)
 };
 
 // Lista de processos que são para menores
 const MINOR_PROCESS_TYPES = [
-  'RenovacaoEstudanteSecundario', // Renovação - Estudante Ensino Secundário (menor)
-  'ConcessaoTREstudanteMenor',    // Concessão de TR para Estudante Menor (APENAS este é para menor)
-  'ReagrupamentoTutor',           // Reagrupamento Familiar - Através do Tutor (menor)
-  'CPLPMenor',                    // CPLP - Menor
-  'Reagrupamento Familiar - Tutor', // Nome completo (menor)
-  'CPLP - Menor'                  // Nome completo (menor)
+  'concessaotr2estudantemenor',
+  'reagrupamentofilho',
+  'reagrupamentofilhomenor',
+  'renovacaoestudantesecundario',
+  'cplpmenor'
+];
+
+// Expressões regulares para detectar processos de menor
+const MINOR_PROCESS_REGEX = [
+  /menor/i,
+  /secundario/i,
+  /crianca/i,
+  /infantil/i,
+  /filho/i
 ];
 
 // Lista de processos de estudante que devem usar PDF de ADULTO
@@ -116,137 +122,114 @@ class PdfService {
   async generatePdfFromDocuments(processId, processType) {
     try {
       logger.info(`Gerando PDF para processo ${processId}`);
-
-      // Criar estrutura de pasta para PDFs se não existir
-      const structure = await fileStorage.createProcessStructure(processId, processType);
-      logger.info(`Estrutura de pastas criada: ${JSON.stringify(structure)}`);
       
-      const pdfsFolderPath = structure.pdfsPath;
-      logger.info(`Pasta para salvar PDFs: ${pdfsFolderPath}`);
-
-      // Listar todos os documentos do processo
-      logger.info(`Buscando documentos do processo ${processId}...`);
-      const allFiles = await fileStorage.listProcessFiles(processId);
-      logger.info(`Arquivos encontrados: ${JSON.stringify(allFiles)}`);
+      // Criar estrutura de pastas para o processo
+      await fileStorage.createProcessStructure(processId);
       
-      // Se não houver arquivos, tentar buscar do servidor diretamente
-      if (!allFiles || allFiles.length === 0) {
-        logger.warn(`Nenhum arquivo encontrado pelo método normal. Tentando buscar diretamente do servidor...`);
-        
-        try {
-          // Tentar buscar do servidor via API
-          const response = await fetch(`http://localhost:3001/api/process-files/${processId}`);
-          if (response.ok) {
-            const serverFiles = await response.json();
-            logger.info(`Arquivos encontrados no servidor: ${JSON.stringify(serverFiles)}`);
-            
-            if (serverFiles && serverFiles.length > 0) {
-              logger.info(`Usando arquivos do servidor: ${serverFiles.length} encontrados`);
-              allFiles.push(...serverFiles);
-            }
-          } else {
-            logger.warn(`Não foi possível obter arquivos do servidor: ${response.status}`);
-          }
-        } catch (serverError) {
-          logger.warn(`Erro ao buscar arquivos do servidor: ${serverError.message}`);
-        }
-      }
+      // Obter os documentos do processo
+      const documents = await this.getDocumentsForProcess(processId);
       
-      const documentFiles = allFiles.filter(file => 
-        file.path.includes('/documentos/') && 
-        (file.mimeType?.startsWith('image/') || file.mimeType === 'application/pdf')
-      );
-
-      if (documentFiles.length === 0) {
-        logger.warn(`Nenhum documento encontrado para o processo ${processId}`);
+      if (!documents || documents.length === 0) {
+        logger.warn(`Nenhum documento encontrado para gerar o PDF do processo ${processId}`);
         return null;
       }
-
-      logger.info(`Encontrados ${documentFiles.length} documentos para processamento em PDF`);
-
-      // Ordenar os arquivos: Front primeiro, Back depois
-      // Abordagem simples e direta - separar em dois grupos e depois juntar
-      const frontFiles = documentFiles.filter(file => file.path.toLowerCase().includes('front'));
-      const backFiles = documentFiles.filter(file => file.path.toLowerCase().includes('back'));
-      const otherFiles = documentFiles.filter(file => 
-        !file.path.toLowerCase().includes('front') && 
-        !file.path.toLowerCase().includes('back')
-      );
       
-      // Combinar na ordem correta: primeiro Front, depois outros, por último Back
-      const sortedFiles = [...frontFiles, ...otherFiles, ...backFiles];
-
-      // Log cada arquivo na ordem que será processado
-      sortedFiles.forEach((file, index) => {
-        logger.info(`Documento ${index + 1} na ordem de processamento: ${file.path}`);
-      });
-
-      logger.info(`Documentos ordenados: Front primeiro, Back depois`);
-
       // Criar um novo documento PDF
-      const doc = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-      });
+      const doc = new jsPDF();
       
-      // Para cada documento, adicionar uma página com a imagem
-      for (let i = 0; i < sortedFiles.length; i++) {
-        const file = sortedFiles[i];
+      // ABORDAGEM SIMPLIFICADA: Usar renderização direta para evitar problemas com URLs
+      let hasAddedAtLeastOneImage = false;
+      
+      for (let i = 0; i < documents.length; i++) {
+        const document = documents[i];
+        logger.info(`Processando documento: ${document.path}`);
         
-        // Adicionar uma nova página, exceto para a primeira
-        if (i > 0) {
+        if (i > 0 && hasAddedAtLeastOneImage) {
           doc.addPage();
         }
-
-        // Obter o arquivo como URL
-        logger.info(`Obtendo URL para arquivo: ${file.path}`);
-        const fileUrl = await fileStorage.getFileUrl(file.path);
-        logger.info(`Processando arquivo: ${file.path} -> URL: ${fileUrl}`);
         
-        // Calcular dimensões para manter a proporção da imagem
         try {
-          const imgProps = await this.calculateImageDimensions(fileUrl);
+          // Obter o arquivo do servidor diretamente
+          const directUrl = `http://localhost:3001/${document.path}`;
+          logger.info(`Tentando carregar documento diretamente de: ${directUrl}`);
           
-          // Adicionar a imagem ao PDF, centralizada na página
-          doc.addImage(
-            fileUrl,
-            'JPEG',
-            this.margin + (this.pageWidth - 2 * this.margin - imgProps.width) / 2,
-            this.margin + (this.pageHeight - 2 * this.margin - imgProps.height) / 2,
-            imgProps.width,
-            imgProps.height
-          );
-
-          logger.info(`Adicionada página ${i+1} ao PDF: ${file.path.split('/').pop()}`);
-        } catch (imgError) {
-          logger.error(`Erro ao processar imagem ${fileUrl}: ${imgError.message}`);
-          // Adicionar uma página com mensagem de erro para não interromper o fluxo
-          doc.setFontSize(16);
-          doc.text('Erro ao processar imagem', this.pageWidth / 2, this.pageHeight / 2, { align: 'center' });
-          doc.setFontSize(12);
-          doc.text(`Arquivo: ${file.path.split('/').pop()}`, this.pageWidth / 2, this.pageHeight / 2 + 10, { align: 'center' });
+          // Adicionar a imagem ao PDF de forma simplificada
+          try {
+            // Tentar obter as dimensões da imagem
+            const img = new Image();
+            await new Promise((resolve, reject) => {
+              img.onload = resolve;
+              img.onerror = reject;
+              img.src = directUrl;
+            });
+            
+            // Calcular as dimensões mantendo a proporção
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+            const margin = 10;
+            
+            const maxWidth = pageWidth - 2 * margin;
+            const maxHeight = pageHeight - 2 * margin;
+            
+            let width = img.width;
+            let height = img.height;
+            
+            // Calcular proporção
+            const ratio = width / height;
+            
+            // Ajustar dimensões para caber na página
+            if (width > maxWidth) {
+              width = maxWidth;
+              height = width / ratio;
+            }
+            
+            if (height > maxHeight) {
+              height = maxHeight;
+              width = height * ratio;
+            }
+            
+            // Adicionar a imagem ao PDF, centralizada na página
+            doc.addImage(
+              img,
+              'JPEG',
+              margin + (pageWidth - 2 * margin - width) / 2,
+              margin + (pageHeight - 2 * margin - height) / 2,
+              width,
+              height
+            );
+            
+            hasAddedAtLeastOneImage = true;
+            logger.info(`Imagem adicionada com sucesso: ${document.path}`);
+          } catch (imgError) {
+            logger.error(`Erro ao processar imagem ${document.path}: ${imgError.message}`);
+            // Adicionar uma página com mensagem de erro
+            doc.setFontSize(16);
+            doc.text('Erro ao processar imagem', doc.internal.pageSize.getWidth() / 2, doc.internal.pageSize.getHeight() / 2, { align: 'center' });
+          }
+        } catch (docError) {
+          logger.error(`Erro ao obter documento ${document.path}: ${docError.message}`);
         }
       }
-
-      // Gerar nome do arquivo com timestamp
+      
+      // Gerar nomes de arquivos únicos com timestamp
       const timestamp = new Date().toISOString().replace(/:/g, '-');
-      const tempPdfFilename = `temp_documentos_${processId}_${timestamp}.pdf`;
-      const finalPdfFilename = `documentos_${processId}_${timestamp}.pdf`;
-      const tempPdfPath = `${pdfsFolderPath}/${tempPdfFilename}`;
-      const finalPdfPath = `${pdfsFolderPath}/${finalPdfFilename}`;
+      const tempFilename = `temp_documentos_${processId}_${timestamp}.pdf`;
+      const outputFilename = `documentos_${processId}_${timestamp}.pdf`;
       
-      logger.info(`Salvando PDF temporário: ${tempPdfPath}`);
+      // Obter a pasta para salvar os PDFs
+      const structure = await fileStorage.createProcessStructure(processId);
+      const pdfFolder = structure.pdfsPath;
+      logger.info(`Pasta para salvar PDFs: ${pdfFolder}`);
       
-      // Converter PDF para blob
+      // Salvar o PDF no disco
       const pdfBlob = doc.output('blob');
       
-      // Não usar mais IndexedDB, vamos apenas gerar o PDF e salvar no servidor
       logger.info(`PDF temporário gerado. Enviando diretamente para o servidor.`);
       
       // Determinar qual declaração de consentimento usar baseado no tipo de processo
       const isMinor = this.isMinorProcess(processType);
       const consentFormPath = isMinor ? CONSENT_FORMS.MINOR : CONSENT_FORMS.ADULT;
+      
       logger.info(`Usando declaração de consentimento para ${isMinor ? 'MENOR' : 'ADULTO'}: ${consentFormPath}`);
       
       let finalPdfBlob;
@@ -259,9 +242,9 @@ class PdfService {
         logger.error(`Erro ao mesclar com consentimento: ${mergeError.message}. Usando PDF sem consentimento.`);
         finalPdfBlob = pdfBlob;
       }
-
+      
       // Em vez de salvar no IndexedDB, vamos enviar para o servidor diretamente
-      logger.info(`Enviando PDF para o servidor: ${finalPdfPath}`);
+      const outputFilePath = `${pdfFolder}/${outputFilename}`;
       
       try {
         // Usando o método de upload para o servidor
@@ -271,51 +254,36 @@ class PdfService {
         const response = await fetch('http://localhost:3001/api/upload-pdf', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
           },
           body: JSON.stringify({
             processId,
             base64Data: base64Pdf,
-            filename: finalPdfFilename,
-            documentType: 'pdf'
-          })
+            filename: outputFilename,
+            path: outputFilePath
+          }),
         });
         
         if (!response.ok) {
-          throw new Error(`Erro na resposta do servidor: ${response.status}`);
+          throw new Error(`Erro ${response.status}: ${response.statusText}`);
         }
         
         const result = await response.json();
         logger.info(`PDF enviado para o servidor com sucesso: ${JSON.stringify(result)}`);
         
-        // Atualizar o JSON do processo para incluir o caminho do PDF
+        // Atualizar o JSON do processo com o caminho do PDF
         try {
-          const processo = await jsonData.getProcessoById(processId);
-          if (processo) {
-            // Verificar se já existe uma lista de PDFs
-            if (!processo.pdfGerados) {
-              processo.pdfGerados = [];
-            }
-            
-            // Adicionar informações do novo PDF - com o caminho na pasta pdfs
-            processo.pdfGerados.push({
-              path: result.fileInfo.path, // usar o caminho retornado pelo servidor
-              type: 'pdf_completo',
-              mimeType: 'application/pdf',
-              size: result.fileInfo.size,
-              createdAt: new Date().toISOString()
-            });
-            
-            // Atualizar o processo no JSON
-            await jsonData.updateProcesso(processId, processo);
-            logger.info(`JSON do processo atualizado com o caminho do PDF: ${result.fileInfo.path}`);
-          }
-        } catch (error) {
-          logger.error(`Erro ao atualizar JSON do processo com caminho do PDF: ${error.message}`);
-          // Não interromper o fluxo principal em caso de erro na atualização do JSON
+          await jsonData.updateProcesso(processId, {
+            pdfPath: result.fileInfo.path,
+          });
+        } catch (jsonError) {
+          logger.error(`Erro ao atualizar processo: ${jsonError.message}`);
         }
         
-        return finalPdfPath;
+        logger.info(`JSON do processo atualizado com o caminho do PDF: ${result.fileInfo.path}`);
+        
+        // Retornar o caminho do arquivo PDF
+        return outputFilePath;
       } catch (uploadError) {
         logger.error(`Erro ao enviar PDF para o servidor: ${uploadError.message}`);
         throw uploadError;
@@ -375,17 +343,69 @@ class PdfService {
       const documentsPdfBytes = await documentsPdfBlob.arrayBuffer();
       const documentsPdfDoc = await PDFDocument.load(documentsPdfBytes);
       
-      // Carregar o formulário de consentimento
-      const consentFormBytes = await fileStorage.getFile(consentFormPath);
-      const consentFormDoc = await PDFDocument.load(consentFormBytes);
+      // Carregar o formulário de consentimento usando fileStorage
+      logger.info(`Tentando carregar o formulário de consentimento: ${consentFormPath}`);
       
-      // Copiar todas as páginas do formulário de consentimento
-      const consentPages = await documentsPdfDoc.copyPages(consentFormDoc, consentFormDoc.getPageIndices());
-      consentPages.forEach(page => documentsPdfDoc.addPage(page));
-      
-      // Salvar o PDF final
-      const finalPdfBytes = await documentsPdfDoc.save();
-      return new Blob([finalPdfBytes], { type: 'application/pdf' });
+      try {
+        // Obter URL do arquivo - ajuste específico para arquivos na raiz
+        let consentFormUrl;
+        
+        // Abordagem específica para arquivos de consentimento
+        if (consentFormPath === 'consent.pdf' || consentFormPath === 'pdf-menores.pdf') {
+          consentFormUrl = `http://localhost:3001/${consentFormPath}`;
+          logger.info(`URL direta para formulário de consentimento: ${consentFormUrl}`);
+        } else {
+          consentFormUrl = await fileStorage.getFileUrl(consentFormPath);
+          logger.info(`URL do formulário de consentimento via fileStorage: ${consentFormUrl}`);
+        }
+        
+        // Buscar o arquivo usando fetch (compatível com navegador)
+        logger.info(`Fazendo fetch para: ${consentFormUrl}`);
+        const response = await fetch(consentFormUrl);
+        
+        if (!response.ok) {
+          logger.error(`Erro HTTP ao buscar formulário: ${response.status} ${response.statusText}`);
+          throw new Error(`Erro ao buscar formulário de consentimento: ${response.status}`);
+        }
+        
+        const consentFormBlob = await response.blob();
+        logger.info(`Formulário de consentimento carregado: ${consentFormBlob.size} bytes`);
+        
+        // Converter o Blob para ArrayBuffer
+        const consentFormBytes = await consentFormBlob.arrayBuffer();
+        
+        if (!consentFormBytes || consentFormBytes.byteLength === 0) {
+          throw new Error(`Arquivo de consentimento vazio ou inválido: ${consentFormPath}`);
+        }
+        
+        logger.info(`Bytes do formulário de consentimento: ${consentFormBytes.byteLength}`);
+        
+        // Carregar o PDF de consentimento
+        const consentFormDoc = await PDFDocument.load(consentFormBytes);
+        logger.info(`PDF de consentimento carregado com ${consentFormDoc.getPageCount()} páginas`);
+        
+        // MODIFICAÇÃO: Criando um novo documento com o consentimento PRIMEIRO
+        const finalPdfDoc = await PDFDocument.create();
+        
+        // 1. Copiar e adicionar as páginas de consentimento PRIMEIRO
+        const consentPages = await finalPdfDoc.copyPages(consentFormDoc, consentFormDoc.getPageIndices());
+        consentPages.forEach(page => finalPdfDoc.addPage(page));
+        logger.info(`Adicionado consentimento como primeiras ${consentPages.length} páginas`);
+        
+        // 2. Depois adicionar as páginas do documento original
+        const documentPages = await finalPdfDoc.copyPages(documentsPdfDoc, documentsPdfDoc.getPageIndices());
+        documentPages.forEach(page => finalPdfDoc.addPage(page));
+        logger.info(`Adicionados ${documentPages.length} documentos após o consentimento`);
+        
+        // Salvar o PDF final com a nova ordem
+        const finalPdfBytes = await finalPdfDoc.save();
+        logger.info(`PDF mesclado gerado com sucesso: ${finalPdfBytes.length} bytes`);
+        
+        return new Blob([finalPdfBytes], { type: 'application/pdf' });
+      } catch (consentError) {
+        logger.error(`Erro ao carregar o formulário de consentimento: ${consentError.message}`, consentError);
+        throw new Error(`Falha ao carregar o formulário de consentimento: ${consentError.message}`);
+      }
     } catch (error) {
       logger.error(`Erro ao mesclar PDFs: ${error.message}`, error);
       throw error;
@@ -563,31 +583,36 @@ class PdfService {
       // Definir o caminho do PDF base de acordo com o tipo de processo
       let basePdfPath;
       if (isMinor) {
-        basePdfPath = path.join(__dirname, '../../public/pdf-menores.pdf');
+        basePdfPath = '/pdf-menores.pdf'; // Caminho relativo para o cliente web
         logger.info('Usando declaração de consentimento para MENOR: /pdf-menores.pdf');
       } else {
         // Verificar se há um PDF específico para o processo, senão usar o padrão
-        const uploadedPdfPath = path.join(__dirname, `../../uploads/${processId}/documentos/pdf_completo.pdf`);
-        
-        if (fs.existsSync(uploadedPdfPath)) {
+        const uploadedPdfPath = `uploads/${processId}/documentos/pdf_completo.pdf`;
+
+        // No ambiente do navegador, precisamos verificar de outra forma
+        try {
+          await fileStorage.getFileUrl(uploadedPdfPath);
           basePdfPath = uploadedPdfPath;
           logger.info(`Usando PDF completo já enviado: ${uploadedPdfPath}`);
-        } else {
-          basePdfPath = path.join(__dirname, '../../public/consent.pdf');
+        } catch (fileError) {
+          basePdfPath = '/consent.pdf'; // Caminho relativo para o cliente web
           logger.info('Usando declaração de consentimento padrão: /consent.pdf');
         }
       }
       
-      // Verificar se o arquivo existe
-      if (!fs.existsSync(basePdfPath)) {
-        logger.error(`PDF base não encontrado: ${basePdfPath}`);
-        throw new Error('PDF base não encontrado');
-      }
-      
       logger.info(`Carregando PDF base: ${basePdfPath}`);
       
-      // Ler o arquivo PDF
-      const existingPdfBytes = fs.readFileSync(basePdfPath);
+      // Obter o arquivo como blob usando fileStorage
+      let existingPdfBlob;
+      try {
+        existingPdfBlob = await fileStorage.getFile(basePdfPath);
+      } catch (error) {
+        logger.error(`Erro ao carregar PDF base: ${error.message}`);
+        throw new Error(`PDF base não encontrado: ${basePdfPath}`);
+      }
+      
+      // Converter blob para bytes
+      const existingPdfBytes = await existingPdfBlob.arrayBuffer();
       const pdfDoc = await PDFDocument.load(existingPdfBytes);
       
       // Obter a primeira página
@@ -617,11 +642,115 @@ class PdfService {
       const pdfBytes = await pdfDoc.save();
       
       logger.info(`PDF gerado com sucesso para ${processId}`);
-      return Buffer.from(pdfBytes);
+      // Retornar como um Blob em vez de Buffer (que é específico do Node.js)
+      return new Blob([pdfBytes], { type: 'application/pdf' });
     } catch (error) {
       logger.error('Erro ao gerar PDF com nome:', error);
       throw error;
     }
+  }
+
+  /**
+   * Obtém os documentos para um processo
+   * @param {string} processId - ID do processo
+   * @returns {Promise<Array>} - Lista de documentos
+   */
+  async getDocumentsForProcess(processId) {
+    try {
+      logger.info(`Buscando documentos do processo ${processId}...`);
+      
+      // Tentar buscar do servidor via API diretamente
+      try {
+        const response = await fetch(`http://localhost:3001/api/process-files/${processId}`);
+        if (response.ok) {
+          const serverFiles = await response.json();
+          logger.info(`Arquivos encontrados no servidor: ${JSON.stringify(serverFiles)}`);
+          
+          if (serverFiles && serverFiles.length > 0) {
+            // Filtrar apenas documentos na pasta 'documentos'
+            const documentFiles = serverFiles.filter(file => 
+              file.path.includes('/documentos/') && 
+              (file.mimeType?.startsWith('image/') || file.mimeType === 'application/pdf')
+            );
+            
+            if (documentFiles.length > 0) {
+              logger.info(`Usando arquivos do servidor: ${documentFiles.length} encontrados`);
+              return documentFiles;
+            }
+          }
+        } else {
+          logger.warn(`Não foi possível obter arquivos do servidor: ${response.status}`);
+        }
+      } catch (serverError) {
+        logger.warn(`Erro ao buscar arquivos do servidor: ${serverError.message}`);
+      }
+      
+      // Se falhar a busca direta, tentar o método antigo
+      const allFiles = await fileStorage.listProcessFiles(processId);
+      logger.info(`Arquivos encontrados pelo método antigo: ${JSON.stringify(allFiles)}`);
+      
+      if (!allFiles || allFiles.length === 0) {
+        logger.warn(`Nenhum arquivo encontrado para o processo ${processId}`);
+        return [];
+      }
+      
+      // Filtrar apenas documentos (imagens e PDFs)
+      const documentFiles = allFiles.filter(file => 
+        file.path.includes('/documentos/') && 
+        (file.mimeType?.startsWith('image/') || file.mimeType === 'application/pdf')
+      );
+      
+      return documentFiles;
+    } catch (error) {
+      logger.error(`Erro ao obter documentos do processo: ${error.message}`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Adiciona uma imagem ao PDF
+   * @param {jsPDF} doc - Documento PDF
+   * @param {string} imageUrl - URL da imagem
+   * @returns {Promise<void>} - Promise vazia quando concluído
+   */
+  async addImageToPdf(doc, imageUrl) {
+    try {
+      // Calcular dimensões para manter a proporção da imagem
+      const imgProps = await this.calculateImageDimensions(imageUrl);
+      
+      // Adicionar a imagem ao PDF, centralizada na página
+      doc.addImage(
+        imageUrl,
+        'JPEG',
+        this.margin + (this.pageWidth - 2 * this.margin - imgProps.width) / 2,
+        this.margin + (this.pageHeight - 2 * this.margin - imgProps.height) / 2,
+        imgProps.width,
+        imgProps.height
+      );
+      
+      return;
+    } catch (imgError) {
+      logger.error(`Erro ao processar imagem ${imageUrl}: ${imgError.message}`);
+      // Adicionar uma página com mensagem de erro para não interromper o fluxo
+      doc.setFontSize(16);
+      doc.text('Erro ao processar imagem', this.pageWidth / 2, this.pageHeight / 2, { align: 'center' });
+      doc.setFontSize(12);
+      doc.text(`Erro: ${imgError.message}`, this.pageWidth / 2, this.pageHeight / 2 + 10, { align: 'center' });
+    }
+  }
+
+  /**
+   * Converte um Blob para ArrayBuffer
+   * @param {Blob} blob - Blob a ser convertido
+   * @returns {Promise<ArrayBuffer>} - ArrayBuffer resultante
+   */
+  async blobToArrayBuffer(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsArrayBuffer(blob);
+    });
   }
 }
 

@@ -3,7 +3,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { jsonData, ocrService, gptService, logger, uploadService as defaultUploadService, idGeneratorService, pdfService, fileStorage } from '../services';
+import { jsonData, ocrService, gptService, gptProcessingService, logger, uploadService as defaultUploadService, idGeneratorService, pdfService, fileStorage } from '../services';
 import captureService from '../components/debug/ProcessoDataCapture';
 import { processSignatureBeforeSubmit } from '../components/upload/SignaturePad';
 import { API_URL } from '../config/api.js';
@@ -265,227 +265,30 @@ const useUpload = (uploadService = defaultUploadService, processType, initialPro
         
         console.log("✅ OCR concluído com sucesso, iniciando processamento GPT...");
         
-        // 2. Processar o texto extraído com GPT
-        // Mapeamento explícito de tipo de processo para categoria - igual ao servidor
-        const processoParaCategoria = {
-          // Concessão
-          'TR': 'concessao',
-          'TRNovo': 'concessao',
-          'TREstudante': 'concessao',
-          'TREstudante2': 'concessao',
-          'TREstudanteMenor': 'concessao',
-          'ConcessaoTR': 'concessao',
-          'ConcessaoTRNovo': 'concessao',
-          'ConcessaoTREstudante': 'concessao',
-          'ConcessaoTREstudante2': 'concessao',
-          'ConcessaoTREstudanteMenor': 'concessao',
-          
-          // Reagrupamento (usa templates de concessão)
-          'ReagrupamentoConjuge': 'concessao',
-          'ReagrupamentoFilho': 'concessao',
-          'ReagrupamentoPaiIdoso': 'concessao',
-          'ReagrupamentoTutor': 'concessao',
-          'ReagrupamentoPaiMaeFora': 'concessao',
-          
-          // CPLP
-          'CPLPMaiores': 'cplp',
-          'CPLPMenor': 'cplp',
-          
-          // Renovação
-          'RenovacaoEstudanteSuperior': 'renovacao',
-          'RenovacaoEstudanteSecundario': 'renovacao',
-          'RenovacaoTratamentoMedico': 'renovacao',
-          'RenovacaoNaoTemEstatuto': 'renovacao',
-          'RenovacaoUniaoEuropeia': 'renovacao',
-          'RenovacaoTitulo': 'renovacao',
-          'RenovacaoEstatuto': 'renovacao',
-          
-          // Contagem de tempo
-          'ContagemTempo': 'contagem',
-          
-          // Informação
-          'InformacaoPortal': 'infoportal',
-          'InfoPortal': 'infoportal',
-          'InformacaoPresencial': 'informacao',
-          'InfoPresencial': 'informacao',
-          
-          // Manifestação de interesse
-          'ManifestacaoInteresse': 'manifestacao',
-          
-          // Alias para corrigir problemas específicos
-          'c': 'cplp'
-        };
-        
-        // Normalizar o tipo de processo para enviar ao GPT
-        let tipoProcessoNormalizado = processType;
-        
-        // Mapear nomes especiais para seus respectivos tipos normalizados
-        const nomeParaTipoProcesso = {
-          // Concessão
-          'Título de Residência': 'TR',
-          'Novo Título de Residência': 'TRNovo',
-          'TR Estudante': 'TREstudante',
-          'TR Estudante Versão 2': 'TREstudante2',
-          'TR Estudante Menor': 'TREstudanteMenor',
-          'Concessão TR': 'TR',
-          'Concessão TR Novo': 'TRNovo',
-          'Concessão TR Estudante': 'TREstudante',
-          'Concessão TR Estudante Versão 2': 'TREstudante2',
-          'Concessão TR Estudante Menor': 'TREstudanteMenor',
-          
-          // Reagrupamento Familiar
-          'Reagrupamento Familiar - Cônjuge': 'ReagrupamentoConjuge',
-          'Reagrupamento Familiar - Filho': 'ReagrupamentoFilho',
-          'Reagrupamento Familiar - Pai Idoso': 'ReagrupamentoPaiIdoso',
-          'Reagrupamento Familiar - Tutor': 'ReagrupamentoTutor',
-          'Reagrupamento Familiar - Através de Pais Fora': 'ReagrupamentoPaiMaeFora',
-          
-          // CPLP
-          'CPLP Maiores': 'CPLPMaiores',
-          'CPLP Menor': 'CPLPMenor',
-          
-          // Renovação
-          'Renovação Estudante Superior': 'EstudanteSuperior',
-          'Renovação Estudante Secundário': 'EstudanteSecundario',
-          'Renovação Tratamento Médico': 'TratamentoMedico',
-          'Renovação Não Tem Estatuto': 'NaoTemEstatuto',
-          'Renovação União Europeia': 'UniaoEuropeia',
-          'Renovação Título': 'RenovacaoTitulo',
-          'Renovação Estatuto': 'RenovacaoEstatuto',
-          
-          // Contagem de Tempo
-          'Contagem de Tempo para Residência Permanente': 'ContagemTempo',
-          'Contagem de Tempo': 'ContagemTempo',
-          
-          // Informação
-          'Informação Portal': 'InfoPortal',
-          'Informação Presencial': 'InfoPresencial',
-          
-          // Manifestação de Interesse
-          'Manifestação de Interesse': 'ManifestacaoInteresse'
-        };
-        
-        // Mapear nomes especiais para suas respectivas categorias
-        const nomeParaCategoria = {
-          // Concessão
-          'Título de Residência': 'concessao',
-          'Novo Título de Residência': 'concessao',
-          'TR Estudante': 'concessao',
-          'TR Estudante Versão 2': 'concessao',
-          'TR Estudante Menor': 'concessao',
-          'Concessão TR': 'concessao',
-          'Concessão TR Novo': 'concessao',
-          'Concessão TR Estudante': 'concessao',
-          'Concessão TR Estudante Versão 2': 'concessao',
-          'Concessão TR Estudante Menor': 'concessao',
-          
-          // Reagrupamento Familiar
-          'Reagrupamento Familiar - Cônjuge': 'concessao',
-          'Reagrupamento Familiar - Filho': 'concessao',
-          'Reagrupamento Familiar - Pai Idoso': 'concessao',
-          'Reagrupamento Familiar - Tutor': 'concessao',
-          'Reagrupamento Familiar - Através de Pais Fora': 'concessao',
-          
-          // CPLP
-          'CPLP Maiores': 'cplp',
-          'CPLP Menor': 'cplp',
-          
-          // Renovação
-          'Renovação Estudante Superior': 'renovacao',
-          'Renovação Estudante Secundário': 'renovacao',
-          'Renovação Tratamento Médico': 'renovacao',
-          'Renovação Não Tem Estatuto': 'renovacao',
-          'Renovação União Europeia': 'renovacao',
-          'Renovação Título': 'renovacao',
-          'Renovação Estatuto': 'renovacao',
-          
-          // Contagem de Tempo
-          'Contagem de Tempo para Residência Permanente': 'contagem',
-          'Contagem de Tempo': 'contagem',
-          
-          // Informação
-          'Informação Portal': 'infoportal',
-          'Informação Presencial': 'informacao',
-          
-          // Manifestação de Interesse
-          'Manifestação de Interesse': 'manifestacao'
-        };
-        
-        // Usar o mapeamento explícito ou fallback para o método original
-        let categoria = processoParaCategoria[processType] || processType.split(/(?=[A-Z])/)[0].toLowerCase();
-        
-        // Se temos um mapeamento de categoria específico, usar ele
-        if (nomeParaCategoria[processType]) {
-          categoria = nomeParaCategoria[processType];
-        }
-        
-        // Adicionar logs para depuração
-        console.log(`🔍 Tipo de processo original: ${processType}`);
-        
-        // Se temos um nome especial mapeado, usar o tipo normalizado
-        if (nomeParaTipoProcesso[processType]) {
-          tipoProcessoNormalizado = nomeParaTipoProcesso[processType];
-          console.log(`🔍 Tipo de processo normalizado: ${tipoProcessoNormalizado}`);
-        }
-        
-        console.log(`🔍 Categoria mapeada: ${categoria}`);
-        
-        // Formatar texto do OCR para envio ao GPT
-        let textoFormatado = '';
-        
-        // Formatar os resultados OCR para envio ao GPT
-        if (typeof ocrResult === 'string') {
-          // Caso simples: apenas um documento
-          textoFormatado = `documento\n${ocrResult}`;
-        } else if (typeof ocrResult === 'object') {
-          // Caso de múltiplos documentos extraídos
-          for (const [docType, docText] of Object.entries(ocrResult)) {
-            if (docText && typeof docText === 'string') {
-              textoFormatado += `${docType}\n${docText}\n\n`;
-              console.log(`📄 OCR para ${docType}: ${docText.substring(0, 100)}...`);
-            }
-          }
-        }
-        
-        // Se ainda estiver vazio, usar o ocrResult diretamente como fallback
-        if (!textoFormatado.trim() && ocrResult) {
-          if (typeof ocrResult === 'object') {
-            textoFormatado = JSON.stringify(ocrResult);
-          } else {
-            textoFormatado = ocrResult.toString();
-          }
-        }
-        
-        const gptResult = await gptService.extractStructuredData(
-          textoFormatado, // Enviar texto formatado em vez do ocrResult direto
-          categoria, // Usar a categoria do mapeamento explícito
-          tipoProcessoNormalizado || processType, // Usar o tipo normalizado se disponível
-          {
-            processId: uploadState.processId
-          }
+        // 2. Processar o texto extraído com GPT usando o novo serviço modular
+        const gptResult = await gptProcessingService.processarDados(
+          ocrResult,
+          processType,
+          uploadState.processId
         );
+        
+        if (!gptResult.success) {
+          throw new Error(gptResult.error || 'Falha no processamento GPT');
+        }
         
         console.log("✅ GPT concluído com sucesso, atualizando estado...");
         
         setUploadState(prev => ({ 
           ...prev, 
           isProcessing: false,
-          extractedData: {
-            ocr: ocrResult,
-            gpt: gptResult.data,
-            campos: gptResult.data
-          }
+          extractedData: gptResult.extractedData
         }));
         
         console.log("✅ Processamento completo dos documentos via OCR e GPT");
         
         return {
           success: true,
-          extractedData: {
-            ocr: ocrResult,
-            gpt: gptResult.data,
-            campos: gptResult.data
-          },
+          extractedData: gptResult.extractedData,
           assinaturaProcessada
         };
       } catch (processingError) {

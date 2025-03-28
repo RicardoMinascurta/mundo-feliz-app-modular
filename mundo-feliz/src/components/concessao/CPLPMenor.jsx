@@ -37,6 +37,8 @@ const CPLPMenor = ({ selectedPerson, onBack, onSuccess }) => {
     
     if (formatoValido) {
       console.log(`Usando ID de processo existente (válido): ${processId}`);
+      // Marcar como gerado/validado ao confirmar formato válido
+      setProcessIdGerado(true);
       return processId;
     }
     
@@ -53,6 +55,8 @@ const CPLPMenor = ({ selectedPerson, onBack, onSuccess }) => {
       
       console.log(`Novo processo ID gerado localmente: ${novoId}`);
       setProcessId(novoId);
+      // Marcar como gerado após criar novo ID
+      setProcessIdGerado(true);
       return novoId;
     } catch (error) {
       console.error('Erro ao gerar processId:', error);

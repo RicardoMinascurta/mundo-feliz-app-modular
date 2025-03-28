@@ -16,8 +16,7 @@ import { promptService } from './src/services/PromptService.js';
 import { execSync } from 'child_process';
 import sharp from 'sharp';
 import emailService from './src/services/emailService.js';
-// Importações necessárias para Azure Form Recognizer (adicionar no topo do arquivo)
-import { AzureKeyCredential, DocumentAnalysisClient } from '@azure/ai-form-recognizer';
+import apiRoutes from './src/api/index.js';
 import dotenv from 'dotenv';
 
 // Carregar variáveis de ambiente
@@ -25,7 +24,7 @@ dotenv.config();
 
 // Configurar variáveis de ambiente para OpenAI se não estiverem definidas
 if (!process.env.OPENAI_API_KEY) {
-  process.env.OPENAI_API_KEY = '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';
+  process.env.OPENAI_API_KEY = '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';
   console.log('⚠️ API key da OpenAI não encontrada no .env, usando valor padrão');
 }
 
@@ -249,24 +248,26 @@ function getPeriodoFromDatabaseId(databaseId) {
   return dbInfo ? dbInfo.period : "Base de dados Notion";
 }
 
+// Configurações do servidor Express
 const app = express();
 const PORT = 3001;
 
-// Configuração da API Notion
-const NOTION_API_KEY = process.env.NOTION_API_KEY || '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';
-const NOTION_API_VERSION = "2022-06-28";
-const NOTION_API_URL = "https://api.notion.com/v1";
-
-// Middleware
+// Configurar CORS
 app.use(cors());
-app.use(bodyParser.json({ limit: '50mb' }));
-app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' })); // Adicionar suporte para formulários
-app.use(express.static('dist'));
 
-// Middleware para servir arquivos estáticos da pasta uploads
+// Servir arquivos estáticos da pasta uploads - Adicionado para resolver problema de acesso às imagens
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Servir arquivos estáticos públicos
+app.use(express.static(path.join(__dirname, 'public')));
 
-// Configuração do multer para upload de arquivos
+// Middlewares
+app.use(express.json({ limit: '50mb' })); // Para requisições JSON
+app.use(express.urlencoded({ extended: true, limit: '50mb' })); // Para formulários
+
+// Rotas da API
+app.use('/api', apiRoutes);
+
+// Configurar multer para uploads
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     const processId = req.body?.processId;
@@ -1127,7 +1128,13 @@ app.get('/api/notion/page/:pageId', async (req, res) => {
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
   console.log(`Dados serão salvos em: ${DATA_FILE}`);
-  console.log(`Conectado à API Notion com chave: ${NOTION_API_KEY.substring(0, 5)}...`);
+  
+  // Verificar se a chave da API Notion está definida
+  if (process.env.NOTION_API_KEY) {
+    console.log(`Conectado à API Notion com chave: ${process.env.NOTION_API_KEY.substring(0, 5)}...`);
+  } else {
+    console.log(`⚠️ Aviso: Chave da API Notion não definida. Funcionalidades do Notion não estarão disponíveis.`);
+  }
 }); 
 
 // Função para criar a estrutura de pastas do processo
@@ -1217,125 +1224,6 @@ app.post('/api/create-process-structure', async (req, res) => {
   }
 }); 
 
-app.post('/api/ocr/extract', async (req, res) => {
-  try {
-    const { base64Data, documentType, processId } = req.body;
-    
-    if (!base64Data) {
-      console.error('❌ API OCR - Faltando dados base64');
-      return res.status(400).json({
-        success: false,
-        error: 'Dados base64 são obrigatórios'
-      });
-    }
-    
-    console.log(`🔍 API OCR - Processando documento tipo ${documentType} para processo ${processId}`);
-    
-    // Remover cabeçalho do base64 se presente
-    const base64Image = base64Data.includes('base64,') 
-      ? base64Data.split('base64,')[1] 
-      : base64Data;
-    
-    // Converter base64 para buffer
-    const imageBuffer = Buffer.from(base64Image, 'base64');
-    
-    // Configurar cliente do Azure Form Recognizer
-    const azureEndpoint = 'https://api-key-tempo.cognitiveservices.azure.com';
-    const azureKey = 'DEv2YRQ4kyteAM6xa69nkY7re4VfMGpgZ3ptDk0I20qKCwQHaRw5JQQJ99BBAC5RqLJXJ3w3AAALACOGwRgV';
-    
-    const client = new DocumentAnalysisClient(
-      azureEndpoint,
-      new AzureKeyCredential(azureKey)
-    );
-    
-    // Analisar documento
-    console.log(`📄 API OCR - Enviando documento para o Azure...`);
-    const poller = await client.beginAnalyzeDocument('prebuilt-read', imageBuffer);
-    const result = await poller.pollUntilDone();
-    
-    // Extrair texto do resultado
-    let extractedText = '';
-    
-    if (result.pages) {
-      for (const page of result.pages) {
-        for (const line of page.lines || []) {
-          extractedText += line.content + '\n';
-        }
-      }
-    }
-    
-    console.log(`✅ API OCR - Texto extraído com sucesso (${extractedText.length} caracteres)`);
-
-    // Verificar se há documentos anteriores extraídos para este processo
-    let allDocumentsText = {};
-    const processDataFile = path.join(UPLOADS_DIR, 'ocr_data', `${processId}.json`);
-    
-    // Criar pasta para armazenar dados OCR se não existir
-    const ocrDataDir = path.join(UPLOADS_DIR, 'ocr_data');
-    if (!fs.existsSync(ocrDataDir)) {
-      fs.mkdirSync(ocrDataDir, { recursive: true });
-    }
-    
-    // Verificar se já temos dados OCR anteriores para este processo
-    if (fs.existsSync(processDataFile)) {
-      try {
-        const existingData = JSON.parse(fs.readFileSync(processDataFile, 'utf8'));
-        allDocumentsText = existingData;
-        console.log(`📄 API OCR - Carregados dados OCR existentes para processo ${processId}`);
-      } catch (err) {
-        console.error(`❌ API OCR - Erro ao carregar dados OCR existentes: ${err.message}`);
-        // Continuar com objeto vazio se houver erro
-      }
-    }
-    
-    // Adicionar o novo texto extraído ao objeto de documentos
-    allDocumentsText[documentType] = extractedText;
-    
-    // Salvar os dados OCR atualizados
-    fs.writeFileSync(processDataFile, JSON.stringify(allDocumentsText, null, 2), 'utf8');
-    console.log(`💾 API OCR - Dados OCR salvos para processo ${processId}`);
-    
-    // Formatar o texto combinado no formato solicitado
-    let combinedText = '';
-    for (const [docType, docText] of Object.entries(allDocumentsText)) {
-      combinedText += `${docType}\n${docText}\n\n`;
-    }
-    
-    // Adicionar texto combinado formatado ao objeto de resposta
-    allDocumentsText._combinedText = combinedText;
-    
-    // Logs detalhados
-    console.log(`📄 API OCR - Documentos processados: ${Object.keys(allDocumentsText).length - 1}`);
-    console.log(`📄 API OCR - Tipos de documentos: ${Object.keys(allDocumentsText).filter(key => key !== '_combinedText').join(', ')}`);
-    console.log(`📄 API OCR - Tamanho total do texto combinado: ${combinedText.length} caracteres`);
-    
-    // Se for apenas um documento, retornar apenas o texto extraído
-    // Se forem múltiplos documentos, retornar o objeto completo
-    const responseData = Object.keys(allDocumentsText).length <= 2 
-      ? extractedText 
-      : allDocumentsText;
-    
-    // Retornar o texto extraído
-    res.json({
-      success: true,
-      text: responseData,
-      processId,
-      documentType,
-      stats: {
-        documentCount: Object.keys(allDocumentsText).filter(key => key !== '_combinedText').length,
-        textLength: extractedText.length,
-        combinedTextLength: combinedText.length
-      }
-    });
-    
-  } catch (error) {
-    console.error('❌ Erro na extração OCR:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Erro na extração OCR: ' + error.message
-    });
-  }
-});
 
 app.post('/api/gpt/extract', async (req, res) => {
   try {
@@ -1432,6 +1320,14 @@ app.post('/api/gpt/extract', async (req, res) => {
     // Preparar prompt e contexto
     const systemPrompt = promptTemplate.system || promptTemplate;
     const userPrompt = textToProcess;
+    
+    // LOG DETALHADO DO PROMPT E TEXTO EXTRAÍDO
+    console.log('=== DETALHES COMPLETOS DO ENVIO PARA GPT ===');
+    console.log('== PROMPT SYSTEM ==');
+    console.log(systemPrompt);
+    console.log('== TEXTO EXTRAÍDO PELO AZURE (ENVIADO COMO USER PROMPT) ==');
+    console.log(userPrompt);
+    console.log('=== FIM DOS DETALHES ===');
     
     // Fazer a chamada para a API da OpenAI
     const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -2688,6 +2584,45 @@ app.post('/api/upload-documento', upload.single('documento'), (req, res) => {
     res.status(500).json({
       success: false,
       error: error.message
+    });
+  }
+});
+
+// Endpoint para mesclar PDF com declaração de consentimento
+app.post('/api/merge-pdf-with-consent', async (req, res) => {
+  try {
+    const { pdfBase64, isMinor } = req.body;
+    
+    if (!pdfBase64) {
+      return res.status(400).json({
+        success: false,
+        error: 'PDF em base64 não fornecido'
+      });
+    }
+    
+    console.log(`📄 API - Iniciando mesclagem de PDF com declaração de consentimento (${isMinor ? 'menor' : 'adulto'})`);
+    
+    // Definir qual formulário usar
+    const consentFormPath = isMinor 
+      ? path.join(__dirname, 'public', 'pdf-menores.pdf')
+      : path.join(__dirname, 'public', 'consent.pdf');
+    
+    // Verificar se o arquivo existe
+    if (!fs.existsSync(consentFormPath)) {
+      console.error(`❌ API - Formulário de consentimento não encontrado: ${consentFormPath}`);
+      return res.status(404).json({
+        success: false,
+        error: `Formulário de consentimento não encontrado: ${consentFormPath}`
+      });
+    }
+    
+    // Continuar com o processamento
+    // ... existing code ...
+  } catch (error) {
+    console.error(`❌ API - Erro no endpoint de mesclagem:`, error);
+    res.status(500).json({
+      success: false,
+      error: `Erro no processamento: ${error.message}`
     });
   }
 });

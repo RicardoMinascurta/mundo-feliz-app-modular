@@ -9,6 +9,8 @@ export { default as jsonData } from './JsonDataService.js';
 // Serviços de processamento
 export { default as ocrService } from './OcrService.js';
 export { default as gptService } from './GptService.js';
+export { default as gptProcessingService } from './GptProcessingService.js';
+export { default as apiService } from './apiService.js';
 
 // Serviços existentes
 import { uploadService } from './uploadService.js';

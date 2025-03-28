@@ -86,6 +86,10 @@ export async function saveBase64FileToUploads(base64Data, processId, documentTyp
       subcategoria = categoria;
       basePath = path.join('Concessao', subcategoria, processId);
       console.log(`🔍 Para Reagrupamento: categoria=${categoria}, basePath=${basePath}`);
+    } else if (categoria === 'CPLPMenor') {
+      // Tratamento especial para CPLPMenor para garantir o caminho correto
+      basePath = path.join('CPLP', 'Menores', processId);
+      console.log(`🔄 Tipo CPLP Menor: usando caminho fixo CPLP/Menores/${processId}`);
     } else if (categoria.startsWith('CPLP')) {
       subcategoria = categoria.replace('CPLP', '');
       basePath = path.join(categoriaNormalizada, subcategoria, processId);

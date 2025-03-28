@@ -11,6 +11,11 @@ const categoriasMap = {
   'CPLP': 'CPLP',
   'CPLPMaiores': 'CPLP/Maiores',
   'CPLPMenor': 'CPLP/Menores',  // Corrigindo para CPLPMenor conforme usado no ListaDeProcessos
+  // Adicionando aliases para garantir consistência
+  'CPLP-Menor': 'CPLP/Menores',
+  'CPLPMenores': 'CPLP/Menores',
+  'Menor': 'CPLP/Menores',
+  'Menores': 'CPLP/Menores',
   
   // Concessão TR
   'ConcessaoTR': 'Concessao/TR',
@@ -143,11 +148,19 @@ class FileStorage {
         return filePath;
       }
       
+      // Para arquivos que começam com / - caminhos relativos à raiz do servidor
+      if (filePath.startsWith('/')) {
+        const url = `http://localhost:3001${filePath}`;
+        logger.info(`Gerando URL para arquivo na raiz: ${url}`);
+        return url;
+      }
+      
       // Para arquivos locais, como public/consent.pdf ou caminhos relativos
       if (filePath.startsWith('./public/')) {
-        const publicPath = filePath.replace('./public/', '/');
-        logger.info(`Gerando URL para arquivo público: ${publicPath}`);
-        return publicPath;
+        const publicPath = filePath.replace('./public', '');
+        const url = `http://localhost:3001${publicPath}`;
+        logger.info(`Gerando URL para arquivo público: ${url}`);
+        return url;
       }
       
       // Para arquivos no diretório de uploads, mapear para a API de arquivos
