@@ -51,12 +51,17 @@ function updateProcessoComArquivo(processId, fileInfo) {
     // Encontrar o processo pelo ID
     const processoIndex = processos.findIndex(p => p.processId === processId);
     
+    // Verificar se o arquivo é uma assinatura baseado no caminho ou tipo
+    const isSignature = fileInfo.path.includes('/assinaturas/') || 
+                        (fileInfo.documentType && fileInfo.documentType.toLowerCase().includes('assinatura'));
+    
     if (processoIndex === -1) {
       console.warn(`⚠️ API - Processo não encontrado para atualização: ${processId}`);
       // Criar um novo processo se não existir
       const novoProcesso = {
         processId,
-        documentos: [fileInfo],
+        documentos: isSignature ? [] : [fileInfo],
+        assinaturas: isSignature ? [fileInfo] : [],
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
@@ -65,15 +70,23 @@ function updateProcessoComArquivo(processId, fileInfo) {
       console.log(`✅ API - Novo processo criado com ID: ${processId}`);
     } else {
       // Processo encontrado, atualizar
-      if (!processos[processoIndex].documentos) {
-        processos[processoIndex].documentos = [];
+      if (isSignature) {
+        // É uma assinatura, adicionar ao array de assinaturas
+        if (!processos[processoIndex].assinaturas) {
+          processos[processoIndex].assinaturas = [];
+        }
+        processos[processoIndex].assinaturas.push(fileInfo);
+        console.log(`✅ API - Assinatura adicionada ao processo ${processId}`);
+      } else {
+        // É um documento normal, adicionar ao array de documentos
+        if (!processos[processoIndex].documentos) {
+          processos[processoIndex].documentos = [];
+        }
+        processos[processoIndex].documentos.push(fileInfo);
+        console.log(`✅ API - Documento adicionado ao processo ${processId}`);
       }
       
-      // Adicionar o novo arquivo à lista de documentos
-      processos[processoIndex].documentos.push(fileInfo);
       processos[processoIndex].updatedAt = new Date().toISOString();
-      
-      console.log(`✅ API - Processo ${processId} atualizado com novo arquivo`);
     }
     
     // Salvar de volta no arquivo

@@ -39,18 +39,48 @@ const DetalhesFormulario = ({
       let initialData = processo.campos || {};
       
       // Verificar em dadosExtraidos se não encontrou nos campos de primeiro nível
-      if (!initialData.pessoaReagrupada && processo.dadosExtraidos?.gpt?.pessoaReagrupada) {
+      if (!initialData.pessoaReagrupada && !initialData.documentos?.pessoaReagrupada && processo.dadosExtraidos?.gpt?.pessoaReagrupada) {
         initialData = {
           ...initialData,
           pessoaReagrupada: processo.dadosExtraidos.gpt.pessoaReagrupada
         };
       }
       
-      if (!initialData.pessoaQueRegrupa && processo.dadosExtraidos?.gpt?.pessoaQueRegrupa) {
+      if (!initialData.pessoaQueRegrupa && !initialData.documentos?.pessoaQueRegrupa && processo.dadosExtraidos?.gpt?.pessoaQueRegrupa) {
         initialData = {
           ...initialData,
           pessoaQueRegrupa: processo.dadosExtraidos.gpt.pessoaQueRegrupa
         };
+      }
+      
+      // Se temos a estrutura aninhada documentos, mover para o nível superior para o formulário
+      if (initialData.documentos) {
+        if (initialData.documentos.pessoaReagrupada) {
+          initialData.pessoaReagrupada = initialData.documentos.pessoaReagrupada;
+        }
+        if (initialData.documentos.pessoaQueRegrupa) {
+          initialData.pessoaQueRegrupa = initialData.documentos.pessoaQueRegrupa;
+        }
+        
+        // Tratar caso específico de CPLPMenor
+        if (initialData.documentos.dados_do_menor) {
+          initialData.dados_do_menor = initialData.documentos.dados_do_menor;
+        }
+        
+        // Tratar caso específico de dados do responsável de CPLPMenor
+        if (initialData.documentos.dados_do_responsavel) {
+          initialData.dados_do_responsavel = initialData.documentos.dados_do_responsavel;
+        }
+        
+        // Para CPLPMaiores
+        if (processType === 'CPLPMaiores' && initialData.documentos.nomeCompleto) {
+          initialData.nomeCompleto = initialData.documentos.nomeCompleto;
+          initialData.nacionalidade = initialData.documentos.nacionalidade;
+          initialData.dataNascimento = initialData.documentos.dataNascimento;
+          initialData.numeroPassaporte = initialData.documentos.numeroPassaporte;
+          initialData.dataValidadePassaporte = initialData.documentos.dataValidadePassaporte;
+          initialData.numeroVisto = initialData.documentos.numeroVisto;
+        }
       }
       
       setFormData(initialData);
@@ -105,196 +135,243 @@ const DetalhesFormulario = ({
     const { name, value } = e.target;
     const fieldName = name || campo;
     
-    // Para campos aninhados (ex: pessoaReagrupada.nomeCompleto)
+    // Para campos aninhados com múltiplos níveis (ex: documentos.dados_do_menor.nome_completo)
     if (campo && campo.includes('.')) {
-      const [parent, child] = campo.split('.');
-      setFormData(prev => ({
-        ...prev,
-        [parent]: {
-          ...prev[parent],
-          [child]: value
-        }
-      }));
+      const partes = campo.split('.');
       
-      // Se estamos a lidar com processo ReagrupamentoPaiMaeFora e o campo parentesco está a ser limpo,
-      // garante que ele mantenha o valor padrão
-      if (processType === 'ReagrupamentoPaiMaeFora') {
-        if (child === 'parentesco' && value === '') {
-          const defaultValue = parent === 'pessoaQueRegrupa' ? 'PAI' : 
-                              parent === 'pessoaReagrupada' ? 'FILHO' : value;
+      if (partes.length > 2) {
+        // Para campos com mais de um nível de aninhamento
+        setFormData(prev => {
+          // Criar uma cópia profunda para evitar alterações imutáveis incorretas
+          const novo = JSON.parse(JSON.stringify(prev));
           
-          // Atualiza o valor do campo para o valor padrão
-          setTimeout(() => {
-            setFormData(prev => ({
-              ...prev,
-              [parent]: {
-                ...prev[parent],
-                [child]: defaultValue
-              }
-            }));
-          }, 0);
-        } else if (child === 'tipoDocumento' && value === '' && parent === 'pessoaQueRegrupa') {
-          // Atualiza o valor do campo tipoDocumento para o valor padrão 'TR'
-          setTimeout(() => {
-            setFormData(prev => ({
-              ...prev,
-              [parent]: {
-                ...prev[parent],
-                [child]: 'TR'
-              }
-            }));
-          }, 0);
-        }
-      } else if (processType === 'ReagrupamentoPaiIdoso') {
-        if (child === 'parentesco' && value === '') {
-          const defaultValue = parent === 'pessoaQueRegrupa' ? 'FILHO' : value;
+          // Navegar pela estrutura até o penúltimo nível
+          let atual = novo;
+          for (let i = 0; i < partes.length - 1; i++) {
+            const parte = partes[i];
+            // Criar objeto se não existir
+            if (!atual[parte]) atual[parte] = {};
+            atual = atual[parte];
+          }
           
-          // Atualiza o valor do campo para o valor padrão
+          // Definir o valor na propriedade final
+          atual[partes[partes.length - 1]] = value;
+
+          // Atualizar o processo e PDF em tempo real após as mudanças
+          const fieldName = partes[partes.length - 1];
+          if (fieldName === 'nomeCompleto' || fieldName === 'nome_completo' || fieldName === 'nome_completo_do_menor') {
+            // Se for o campo de nome, atualizar através do onNomeChange
+            if (onNomeChange) {
+              onNomeChange(value);
+            }
+          }
+
+          // Disparar uma atualização do PDF quando os dados são alterados
           setTimeout(() => {
-            setFormData(prev => ({
-              ...prev,
-              [parent]: {
-                ...prev[parent],
-                [child]: defaultValue
-              }
-            }));
-          }, 0);
-        } else if (child === 'tipoDocumento' && value === '' && parent === 'pessoaQueRegrupa') {
-          // Atualiza o valor do campo tipoDocumento para o valor padrão 'TR'
+            const dadosAtualizados = {
+              ...novo,
+              selectedFields,
+              outrosDetalhes
+            };
+            if (onSave) {
+              onSave(dadosAtualizados);
+            }
+            // Disparar evento para regenerar PDF
+            window.dispatchEvent(new CustomEvent('regeneratePdf'));
+          }, 100);
+          
+          return novo;
+        });
+      } else {
+        // Para campos com um nível de aninhamento (ex: pessoaReagrupada.nomeCompleto)
+        const [parent, child] = partes;
+        setFormData(prev => {
+          const updated = {
+            ...prev,
+            [parent]: {
+              ...prev[parent],
+              [child]: value
+            }
+          };
+
+          // Atualizar o nome se for o campo de nome
+          if (child === 'nomeCompleto' || child === 'nome_completo' || child === 'nome_completo_do_menor') {
+            if (onNomeChange) {
+              onNomeChange(value);
+            }
+          }
+
+          // Disparar uma atualização do PDF quando os dados são alterados
           setTimeout(() => {
-            setFormData(prev => ({
-              ...prev,
-              [parent]: {
-                ...prev[parent],
-                [child]: 'TR'
-              }
-            }));
-          }, 0);
-        }
-      } else if (processType === 'ReagrupamentoFilho') {
-        if (child === 'parentesco' && value === '' && parent === 'pessoaQueRegrupa') {
-          // Atualiza o valor do campo parentesco para o valor padrão 'FILHO'
-          setTimeout(() => {
-            setFormData(prev => ({
-              ...prev,
-              [parent]: {
-                ...prev[parent],
-                [child]: 'FILHO'
-              }
-            }));
-          }, 0);
-        } else if (child === 'tipoDocumento' && value === '' && parent === 'pessoaQueRegrupa') {
-          // Atualiza o valor do campo tipoDocumento para o valor padrão 'TR'
-          setTimeout(() => {
-            setFormData(prev => ({
-              ...prev,
-              [parent]: {
-                ...prev[parent],
-                [child]: 'TR'
-              }
-            }));
-          }, 0);
-        }
-      } else if (processType === 'ReagrupamentoTutor') {
-        if (child === 'parentesco' && value === '' && parent === 'pessoaQueRegrupa') {
-          // Atualiza o valor do campo parentesco para o valor padrão 'TUTOR'
-          setTimeout(() => {
-            setFormData(prev => ({
-              ...prev,
-              [parent]: {
-                ...prev[parent],
-                [child]: 'TUTOR'
-              }
-            }));
-          }, 0);
-        } else if (child === 'tipoDocumento' && value === '' && parent === 'pessoaQueRegrupa') {
-          // Atualiza o valor do campo tipoDocumento para o valor padrão 'TR'
-          setTimeout(() => {
-            setFormData(prev => ({
-              ...prev,
-              [parent]: {
-                ...prev[parent],
-                [child]: 'TR'
-              }
-            }));
-          }, 0);
-        }
-      } else if (processType === 'ReagrupamentoConjuge') {
-        if (child === 'parentesco' && value === '' && parent === 'pessoaQueRegrupa') {
-          // Atualiza o valor do campo parentesco para o valor padrão 'CÔNJUGE'
-          setTimeout(() => {
-            setFormData(prev => ({
-              ...prev,
-              [parent]: {
-                ...prev[parent],
-                [child]: 'CÔNJUGE'
-              }
-            }));
-          }, 0);
-        } else if (child === 'tipoDocumento' && value === '' && parent === 'pessoaQueRegrupa') {
-          // Atualiza o valor do campo tipoDocumento para o valor padrão 'TR'
-          setTimeout(() => {
-            setFormData(prev => ({
-              ...prev,
-              [parent]: {
-                ...prev[parent],
-                [child]: 'TR'
-              }
-            }));
-          }, 0);
+            const dadosAtualizados = {
+              ...updated,
+              selectedFields,
+              outrosDetalhes
+            };
+            if (onSave) {
+              onSave(dadosAtualizados);
+            }
+            // Disparar evento para regenerar PDF
+            window.dispatchEvent(new CustomEvent('regeneratePdf'));
+          }, 100);
+
+          return updated;
+        });
+        
+        // Se estamos a lidar com processo ReagrupamentoPaiMaeFora e o campo parentesco está a ser limpo,
+        // garante que ele mantenha o valor padrão
+        if (processType === 'ReagrupamentoPaiMaeFora') {
+          if (child === 'parentesco' && value === '') {
+            const defaultValue = parent === 'pessoaQueRegrupa' ? 'PAI' : 
+                                parent === 'pessoaReagrupada' ? 'FILHO' : value;
+            
+            // Atualiza o valor do campo para o valor padrão
+            setTimeout(() => {
+              setFormData(prev => {
+                const updated = {
+                  ...prev,
+                  [parent]: {
+                    ...prev[parent],
+                    [child]: defaultValue
+                  }
+                };
+
+                // Disparar atualização do PDF
+                setTimeout(() => {
+                  const dadosAtualizados = {
+                    ...updated,
+                    selectedFields,
+                    outrosDetalhes
+                  };
+                  if (onSave) {
+                    onSave(dadosAtualizados);
+                  }
+                  window.dispatchEvent(new CustomEvent('regeneratePdf'));
+                }, 100);
+
+                return updated;
+              });
+            }, 0);
+          } else if (child === 'tipoDocumento' && value === '' && parent === 'pessoaQueRegrupa') {
+            // Atualiza o valor do campo tipoDocumento para o valor padrão 'TR'
+            setTimeout(() => {
+              setFormData(prev => ({
+                ...prev,
+                [parent]: {
+                  ...prev[parent],
+                  [child]: 'TR'
+                }
+              }));
+            }, 0);
+          }
+        } else if (processType === 'ReagrupamentoPaiIdoso') {
+          if (child === 'parentesco' && value === '') {
+            const defaultValue = parent === 'pessoaQueRegrupa' ? 'FILHO' : value;
+            
+            // Atualiza o valor do campo para o valor padrão
+            setTimeout(() => {
+              setFormData(prev => ({
+                ...prev,
+                [parent]: {
+                  ...prev[parent],
+                  [child]: defaultValue
+                }
+              }));
+            }, 0);
+          } else if (child === 'tipoDocumento' && value === '' && parent === 'pessoaQueRegrupa') {
+            // Atualiza o valor do campo tipoDocumento para o valor padrão 'TR'
+            setTimeout(() => {
+              setFormData(prev => ({
+                ...prev,
+                [parent]: {
+                  ...prev[parent],
+                  [child]: 'TR'
+                }
+              }));
+            }, 0);
+          }
+        } else if (processType === 'ReagrupamentoFilho') {
+          if (child === 'parentesco' && value === '' && parent === 'pessoaQueRegrupa') {
+            // Atualiza o valor do campo parentesco para o valor padrão 'FILHO'
+            setTimeout(() => {
+              setFormData(prev => ({
+                ...prev,
+                [parent]: {
+                  ...prev[parent],
+                  [child]: 'FILHO'
+                }
+              }));
+            }, 0);
+          } else if (child === 'tipoDocumento' && value === '' && parent === 'pessoaQueRegrupa') {
+            // Atualiza o valor do campo tipoDocumento para o valor padrão 'TR'
+            setTimeout(() => {
+              setFormData(prev => ({
+                ...prev,
+                [parent]: {
+                  ...prev[parent],
+                  [child]: 'TR'
+                }
+              }));
+            }, 0);
+          }
+        } else if (processType === 'ReagrupamentoConjuge') {
+          if (child === 'parentesco' && value === '' && parent === 'pessoaQueRegrupa') {
+            // Atualiza o valor do campo parentesco para o valor padrão 'CÔNJUGE'
+            setTimeout(() => {
+              setFormData(prev => ({
+                ...prev,
+                [parent]: {
+                  ...prev[parent],
+                  [child]: 'CÔNJUGE'
+                }
+              }));
+            }, 0);
+          } else if (child === 'tipoDocumento' && value === '' && parent === 'pessoaQueRegrupa') {
+            // Atualiza o valor do campo tipoDocumento para o valor padrão 'TR'
+            setTimeout(() => {
+              setFormData(prev => ({
+                ...prev,
+                [parent]: {
+                  ...prev[parent],
+                  [child]: 'TR'
+                }
+              }));
+            }, 0);
+          }
         }
       }
     } else {
       // Para campos simples
-      setFormData(prev => ({
-        ...prev,
-        [fieldName]: value
-      }));
+      setFormData(prev => {
+        const updated = {
+          ...prev,
+          [fieldName]: value
+        };
+
+        // Atualizar o nome se for o campo de nome
+        if (fieldName === 'nomeCompleto' || fieldName === 'nome_completo' || fieldName === 'nome_completo_do_menor') {
+          if (onNomeChange) {
+            onNomeChange(value);
+          }
+        }
+
+        // Disparar uma atualização do PDF quando os dados são alterados
+        setTimeout(() => {
+          const dadosAtualizados = {
+            ...updated,
+            selectedFields,
+            outrosDetalhes
+          };
+          if (onSave) {
+            onSave(dadosAtualizados);
+          }
+          // Disparar evento para regenerar PDF
+          window.dispatchEvent(new CustomEvent('regeneratePdf'));
+        }, 100);
+
+        return updated;
+      });
     }
-    
-    // Atualizar campos no formData para processamento imediato
-    let updatedData;
-    
-    if (campo && campo.includes('.')) {
-      const [parent, child] = campo.split('.');
-      updatedData = {
-        ...formData,
-        [parent]: {
-          ...formData[parent],
-          [child]: value
-        },
-        selectedFields: selectedFields,
-        outrosDetalhes: outrosDetalhes
-      };
-    } else {
-      updatedData = {
-        ...formData,
-        [fieldName]: value,
-        selectedFields: selectedFields,
-        outrosDetalhes: outrosDetalhes
-      };
-    }
-    
-    // Notificar o componente pai sobre a mudança de nome, se aplicável
-    if ((fieldName === 'nomeCompleto' || 
-         campo?.includes('nomeCompleto') || 
-         campo?.includes('nome_completo') || 
-         campo?.includes('nome_do_responsavel') ||
-         campo?.includes('nomeResponsavelLegal') ||
-         (parent === 'pessoaReagrupada' && child === 'nomeCompleto') ||
-         (parent === 'pessoaQueRegrupa' && child === 'nomeCompleto') ||
-         (parent === 'dados_do_menor' && child === 'nome_completo')) && 
-        onNomeChange) {
-      onNomeChange(value);
-    }
-    
-    // Se tiver função de salvamento, atualizar os dados no componente pai
-    if (onSave) {
-      onSave(updatedData);
-    }
-    
-    // Regenerar o PDF automaticamente, sem esperar pelo clique em "Salvar"
-    window.dispatchEvent(new CustomEvent('regeneratePdf'));
   };
   
   const handleCheckboxChange = (event) => {
@@ -330,75 +407,92 @@ const DetalhesFormulario = ({
   };
   
   const handleSave = () => {
-    // Clonar os dados do formulário para não modificar o estado diretamente
+    // Criar uma cópia profunda dos dados do formulário
     const dataToSave = JSON.parse(JSON.stringify(formData));
     
-    // Verificar campos específicos para o processo de ReagrupamentoPaiMaeFora
-    if (processType === 'ReagrupamentoPaiMaeFora') {
-      // Se o parentesco da pessoa que reagrupa não estiver definido, definir como Pai/Mãe
-      if (!dataToSave.pessoaQueRegrupa?.parentesco) {
-        if (!dataToSave.pessoaQueRegrupa) dataToSave.pessoaQueRegrupa = {};
-        dataToSave.pessoaQueRegrupa.parentesco = 'PAI';
+    // Garantir que a estrutura de documentos exista
+    if (!dataToSave.documentos) {
+      dataToSave.documentos = {};
+    }
+    
+    // Tratar casos específicos com base no tipo de processo
+    if (processType.includes('Reagrupamento')) {
+      // Garantir que as estruturas existam para Reagrupamento
+      if (!dataToSave.pessoaReagrupada) {
+        dataToSave.pessoaReagrupada = {};
+      }
+      if (!dataToSave.pessoaQueRegrupa) {
+        dataToSave.pessoaQueRegrupa = {};
       }
       
-      // Se o parentesco da pessoa reagrupada não estiver definido, definir como Filho/Filha
-      if (!dataToSave.pessoaReagrupada?.parentesco) {
-        if (!dataToSave.pessoaReagrupada) dataToSave.pessoaReagrupada = {};
-        dataToSave.pessoaReagrupada.parentesco = 'FILHO';
+      // Migrar dados para a estrutura aninhada documentos
+      if (!dataToSave.documentos.pessoaReagrupada) {
+        dataToSave.documentos.pessoaReagrupada = {...dataToSave.pessoaReagrupada};
+      }
+      if (!dataToSave.documentos.pessoaQueRegrupa) {
+        dataToSave.documentos.pessoaQueRegrupa = {...dataToSave.pessoaQueRegrupa};
       }
       
-      // Se o tipo de documento da pessoa que reagrupa não estiver definido, definir como TR
-      if (!dataToSave.pessoaQueRegrupa?.tipoDocumento) {
-        if (!dataToSave.pessoaQueRegrupa) dataToSave.pessoaQueRegrupa = {};
-        dataToSave.pessoaQueRegrupa.tipoDocumento = 'TR';
+      // Atribuir valores padrão, se necessário
+      if (processType === 'ReagrupamentoPaiMaeFora') {
+        if (!dataToSave.pessoaQueRegrupa.parentesco) dataToSave.pessoaQueRegrupa.parentesco = 'PAI';
+        if (!dataToSave.pessoaQueRegrupa.tipoDocumento) dataToSave.pessoaQueRegrupa.tipoDocumento = 'TR';
+        
+        // Também atualizar na estrutura aninhada
+        if (!dataToSave.documentos.pessoaQueRegrupa.parentesco) dataToSave.documentos.pessoaQueRegrupa.parentesco = 'PAI';
+        if (!dataToSave.documentos.pessoaQueRegrupa.tipoDocumento) dataToSave.documentos.pessoaQueRegrupa.tipoDocumento = 'TR';
+      } else if (processType === 'ReagrupamentoPaiIdoso') {
+        if (!dataToSave.pessoaQueRegrupa.parentesco) dataToSave.pessoaQueRegrupa.parentesco = 'FILHO';
+        if (!dataToSave.pessoaQueRegrupa.tipoDocumento) dataToSave.pessoaQueRegrupa.tipoDocumento = 'TR';
+        
+        // Também atualizar na estrutura aninhada
+        if (!dataToSave.documentos.pessoaQueRegrupa.parentesco) dataToSave.documentos.pessoaQueRegrupa.parentesco = 'FILHO';
+        if (!dataToSave.documentos.pessoaQueRegrupa.tipoDocumento) dataToSave.documentos.pessoaQueRegrupa.tipoDocumento = 'TR';
+      } else if (processType === 'ReagrupamentoFilho') {
+        if (!dataToSave.pessoaQueRegrupa.parentesco) dataToSave.pessoaQueRegrupa.parentesco = 'FILHO';
+        if (!dataToSave.pessoaQueRegrupa.tipoDocumento) dataToSave.pessoaQueRegrupa.tipoDocumento = 'TR';
+        
+        // Também atualizar na estrutura aninhada
+        if (!dataToSave.documentos.pessoaQueRegrupa.parentesco) dataToSave.documentos.pessoaQueRegrupa.parentesco = 'FILHO';
+        if (!dataToSave.documentos.pessoaQueRegrupa.tipoDocumento) dataToSave.documentos.pessoaQueRegrupa.tipoDocumento = 'TR';
+      } else if (processType === 'ReagrupamentoConjuge') {
+        if (!dataToSave.pessoaQueRegrupa.parentesco) dataToSave.pessoaQueRegrupa.parentesco = 'CÔNJUGE';
+        if (!dataToSave.pessoaQueRegrupa.tipoDocumento) dataToSave.pessoaQueRegrupa.tipoDocumento = 'TR';
+        
+        // Também atualizar na estrutura aninhada
+        if (!dataToSave.documentos.pessoaQueRegrupa.parentesco) dataToSave.documentos.pessoaQueRegrupa.parentesco = 'CÔNJUGE';
+        if (!dataToSave.documentos.pessoaQueRegrupa.tipoDocumento) dataToSave.documentos.pessoaQueRegrupa.tipoDocumento = 'TR';
       }
-    } else if (processType === 'ReagrupamentoPaiIdoso') {
-      // Se o parentesco da pessoa que reagrupa não estiver definido, definir como FILHO
-      if (!dataToSave.pessoaQueRegrupa?.parentesco) {
-        if (!dataToSave.pessoaQueRegrupa) dataToSave.pessoaQueRegrupa = {};
-        dataToSave.pessoaQueRegrupa.parentesco = 'FILHO';
+    } else if (processType === 'CPLPMaiores') {
+      // Migrar dados para a estrutura aninhada documentos para CPLPMaiores
+      dataToSave.documentos.nomeCompleto = dataToSave.nomeCompleto || '';
+      dataToSave.documentos.nacionalidade = dataToSave.nacionalidade || '';
+      dataToSave.documentos.dataNascimento = dataToSave.dataNascimento || '';
+      dataToSave.documentos.numeroPassaporte = dataToSave.numeroPassaporte || '';
+      dataToSave.documentos.dataValidadePassaporte = dataToSave.dataValidadePassaporte || '';
+      dataToSave.documentos.numeroVisto = dataToSave.numeroVisto || '';
+    } else if (processType === 'CPLPMenor') {
+      // Garantir que a estrutura aninhada exista para CPLPMenor
+      if (!dataToSave.documentos.dados_do_menor) {
+        dataToSave.documentos.dados_do_menor = {};
+      }
+      if (!dataToSave.documentos.dados_do_responsavel) {
+        dataToSave.documentos.dados_do_responsavel = {};
       }
       
-      // Se o tipo de documento da pessoa que reagrupa não estiver definido, definir como TR
-      if (!dataToSave.pessoaQueRegrupa?.tipoDocumento) {
-        if (!dataToSave.pessoaQueRegrupa) dataToSave.pessoaQueRegrupa = {};
-        dataToSave.pessoaQueRegrupa.tipoDocumento = 'TR';
-      }
-    } else if (processType === 'ReagrupamentoFilho') {
-      // Se o parentesco da pessoa que reagrupa não estiver definido, definir como FILHO
-      if (!dataToSave.pessoaQueRegrupa?.parentesco) {
-        if (!dataToSave.pessoaQueRegrupa) dataToSave.pessoaQueRegrupa = {};
-        dataToSave.pessoaQueRegrupa.parentesco = 'FILHO';
+      // Migrar dados para a estrutura aninhada documentos para CPLPMenor
+      if (dataToSave.dados_do_menor) {
+        dataToSave.documentos.dados_do_menor = {
+          ...dataToSave.documentos.dados_do_menor,
+          ...dataToSave.dados_do_menor
+        };
       }
       
-      // Se o tipo de documento da pessoa que reagrupa não estiver definido, definir como TR
-      if (!dataToSave.pessoaQueRegrupa?.tipoDocumento) {
-        if (!dataToSave.pessoaQueRegrupa) dataToSave.pessoaQueRegrupa = {};
-        dataToSave.pessoaQueRegrupa.tipoDocumento = 'TR';
-      }
-    } else if (processType === 'ReagrupamentoTutor') {
-      // Se o parentesco da pessoa que reagrupa não estiver definido, definir como TUTOR
-      if (!dataToSave.pessoaQueRegrupa?.parentesco) {
-        if (!dataToSave.pessoaQueRegrupa) dataToSave.pessoaQueRegrupa = {};
-        dataToSave.pessoaQueRegrupa.parentesco = 'TUTOR';
-      }
-      
-      // Se o tipo de documento da pessoa que reagrupa não estiver definido, definir como TR
-      if (!dataToSave.pessoaQueRegrupa?.tipoDocumento) {
-        if (!dataToSave.pessoaQueRegrupa) dataToSave.pessoaQueRegrupa = {};
-        dataToSave.pessoaQueRegrupa.tipoDocumento = 'TR';
-      }
-    } else if (processType === 'ReagrupamentoConjuge') {
-      // Se o parentesco da pessoa que reagrupa não estiver definido, definir como CÔNJUGE
-      if (!dataToSave.pessoaQueRegrupa?.parentesco) {
-        if (!dataToSave.pessoaQueRegrupa) dataToSave.pessoaQueRegrupa = {};
-        dataToSave.pessoaQueRegrupa.parentesco = 'CÔNJUGE';
-      }
-      
-      // Se o tipo de documento da pessoa que reagrupa não estiver definido, definir como TR
-      if (!dataToSave.pessoaQueRegrupa?.tipoDocumento) {
-        if (!dataToSave.pessoaQueRegrupa) dataToSave.pessoaQueRegrupa = {};
-        dataToSave.pessoaQueRegrupa.tipoDocumento = 'TR';
+      if (dataToSave.dados_do_responsavel) {
+        dataToSave.documentos.dados_do_responsavel = {
+          ...dataToSave.documentos.dados_do_responsavel,
+          ...dataToSave.dados_do_responsavel
+        };
       }
     }
     
@@ -429,7 +523,7 @@ const DetalhesFormulario = ({
   const renderSimplifiedForm = () => {
     // Verificar se o processo é do tipo reagrupamento
     const isReagrupamento = processType.includes('Reagrupamento');
-    const isReagrupamentoFilho = processType === 'ReagrupamentoFilho';
+    const isCPLPMenor = processType === 'CPLPMenor';
     
     return (
       <Box className="simplified-form" sx={{ width: '100%' }}>
@@ -863,34 +957,6 @@ const DetalhesFormulario = ({
               </Box>
             )}
             
-            {/* Campo de tipo de documento para processos ReagrupamentoTutor */}
-            {processType === 'ReagrupamentoTutor' && (
-              <Box className="form-field" mt={1} sx={{ width: '100%' }}>
-                <Typography variant="body2" className="field-label" style={{ fontSize: '0.8rem' }}>
-                  Tipo de Documento
-                </Typography>
-                <Select
-                  name="pessoaQueRegrupa.tipoDocumento"
-                  value={formData.pessoaQueRegrupa?.tipoDocumento || 'TR'}
-                  onChange={(e) => handleInputChange(e, 'pessoaQueRegrupa.tipoDocumento')}
-                  disabled={!editMode}
-                  variant="outlined"
-                  size="small"
-                  fullWidth
-                  sx={{ 
-                    '& .MuiInputBase-root': { 
-                      height: '30px',
-                      fontSize: '0.85rem',
-                      backgroundColor: !editMode ? 'rgba(232, 244, 253, 0.3)' : 'inherit'
-                    }
-                  }}
-                >
-                  <MenuItem value="TR">TR</MenuItem>
-                  <MenuItem value="CC">CC</MenuItem>
-                </Select>
-              </Box>
-            )}
-            
             {/* Campo de tipo de documento para processos ReagrupamentoConjuge */}
             {processType === 'ReagrupamentoConjuge' && (
               <Box className="form-field" mt={1} sx={{ width: '100%' }}>
@@ -1161,21 +1227,38 @@ const DetalhesFormulario = ({
                 // Determinar o valor a ser exibido
                 let valorCampo = '';
                 if (campo.id.includes('.')) {
-                  const [parent, child] = campo.id.split('.');
-                  valorCampo = formData[parent] ? formData[parent][child] || '' : '';
-                  
-                  // Adicionar valores padrão para o processo ReagrupamentoPaiMaeFora
-                  if (processType === 'ReagrupamentoPaiMaeFora') {
-                    if (valorCampo === '' && parent === 'pessoaQueRegrupa' && child === 'parentesco') {
-                      valorCampo = 'PAI';
-                    } else if (valorCampo === '' && parent === 'pessoaReagrupada' && child === 'parentesco') {
-                      valorCampo = 'FILHO';
-                    } else if (valorCampo === '' && parent === 'pessoaQueRegrupa' && child === 'tipoDocumento') {
-                      valorCampo = 'TR';
+                  // Lidar com campos aninhados com múltiplos níveis (ex: documentos.dados_do_menor.nome_completo)
+                  const partes = campo.id.split('.');
+                  if (partes.length > 2) {
+                    // Para campos com mais de um nível de aninhamento (ex: documentos.dados_do_menor.nome_completo)
+                    let valor = formData;
+                    for (const parte of partes) {
+                      valor = valor && valor[parte] ? valor[parte] : undefined;
+                    }
+                    valorCampo = valor || '';
+                  } else {
+                    // Para campos com um nível de aninhamento (ex: pessoaReagrupada.nomeCompleto)
+                    const [parent, child] = partes;
+                    valorCampo = formData[parent] ? formData[parent][child] || '' : '';
+                    
+                    // Adicionar valores padrão para o processo ReagrupamentoPaiMaeFora
+                    if (processType === 'ReagrupamentoPaiMaeFora') {
+                      if (valorCampo === '' && parent === 'pessoaQueRegrupa' && child === 'parentesco') {
+                        valorCampo = 'PAI';
+                      } else if (valorCampo === '' && parent === 'pessoaReagrupada' && child === 'parentesco') {
+                        valorCampo = 'FILHO';
+                      } else if (valorCampo === '' && parent === 'pessoaQueRegrupa' && child === 'tipoDocumento') {
+                        valorCampo = 'TR';
+                      }
                     }
                   }
                 } else {
                   valorCampo = formData[campo.id] || '';
+                }
+                
+                // Converter para string para evitar [object Object]
+                if (typeof valorCampo === 'object' && valorCampo !== null) {
+                  valorCampo = JSON.stringify(valorCampo);
                 }
                 
                 // Verificar se deve exibir o campo com base no seu tipo e valor

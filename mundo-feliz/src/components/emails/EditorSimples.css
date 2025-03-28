@@ -24,20 +24,21 @@
 /* Estilos para garantir consistência entre navegadores */
 .editor-simples table {
   border-collapse: collapse;
-  width: 440px;
-  max-width: 440px;
-  table-layout: fixed;
-  margin: 0;
+  width: 480px !important;
+  max-width: 480px !important;
+  table-layout: fixed !important;
+  margin: 0 !important;
   -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
   color: #000000 !important;
+  float: left !important;
 }
 
 /* Estilo específico para tabela do template de estudante */
 .editor-simples table[data-template="estudante"] {
-  width: 462px !important;
-  max-width: 462px !important;
+  width: 480px !important;
+  max-width: 480px !important;
 }
 
 .editor-simples td {
@@ -62,8 +63,13 @@
 
 /* Força o Chrome a respeitar os tamanhos de célula */
 .editor-simples td:first-child {
-  width: 30%;
+  width: 30% !important;
   text-align: left;
+}
+
+/* Força o Chrome a respeitar os tamanhos da segunda célula */
+.editor-simples td:nth-child(2) {
+  width: 70% !important;
 }
 
 /* Correção para garantir que o Edge e Chrome mostrem as células da mesma altura */
@@ -88,6 +94,20 @@
 .editor-simples tr:last-child td:last-child {
   height: 38px !important;
   color: #000000 !important;
+}
+
+/* Container para limitar a largura da tabela */
+.editor-simples div[style*="max-width"] {
+  margin: 0 !important;
+  text-align: left !important;
+}
+
+/* Usado para limpar o float após a tabela */
+.editor-simples div[style*="clear: both"] {
+  clear: both !important;
+  display: block !important;
+  height: 0 !important;
+  overflow: hidden !important;
 }
 
 /* Melhorias para o editor no Chrome/Edge */

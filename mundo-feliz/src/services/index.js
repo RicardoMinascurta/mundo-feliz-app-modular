@@ -60,6 +60,9 @@ import pdfService from './pdfService.js';
 import { idGeneratorService } from './IdGeneratorService.js';
 import { processoService } from './processoService.js';
 
+// Serviços de cliente
+import clientEmailService from './client/emailService.js';
+
 // Exportar todos os serviços
 export {
   // Serviços existentes
@@ -71,5 +74,11 @@ export {
   promptService,
   pdfService,
   idGeneratorService,
-  processoService
-}; 
+  processoService,
+
+  // Serviços de cliente
+  clientEmailService
+};
+
+// Exportar o novo serviço de email do cliente
+export const emailService = clientEmailService; 

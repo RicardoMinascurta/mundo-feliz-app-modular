@@ -345,6 +345,48 @@ const PdfProcessor = ({ processId, personName, completePdfPath, onPdfProcessed, 
   // Determinar qual processo usar: o processado localmente ou o recebido via props
   const processoToUse = processo || processedProcesso;
 
+  const saveProcessedPdfToServer = async (processId, pdfBlob, personName) => {
+    try {
+      console.log('PdfProcessor: Enviando PDF preenchido para o servidor...');
+      
+      // Criar um formulário para enviar o arquivo
+      const formData = new FormData();
+      formData.append('pdfFile', pdfBlob, `pdf_preenchido_${personName}.pdf`);
+      formData.append('processId', processId);
+      formData.append('personName', personName);
+      
+      // Enviar para o servidor
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+      const response = await fetch(`${API_BASE_URL}/api/email/save-pdf`, {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Erro ao salvar PDF: ${response.status} ${response.statusText}`);
+      }
+      
+      const result = await response.json();
+      console.log('PdfProcessor: PDF preenchido salvo no servidor:', result);
+      
+      // Armazenar informações do PDF para uso posterior
+      window.currentProcessedPdfInfo = {
+        ...result,
+        blob: pdfBlob,
+        url: URL.createObjectURL(pdfBlob),
+        isSavedOnServer: true
+      };
+      
+      return result;
+    } catch (error) {
+      console.error('PdfProcessor: Erro ao salvar PDF no servidor:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  };
+
   return (
     <div className="pdf-processor">
       {loading ? (

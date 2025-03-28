@@ -45,6 +45,15 @@ async function listProcessos() {
 }
 
 /**
+ * Obtém todos os processos (método aliás para listProcessos)
+ * Usado pela InboxPage para obter todos os processos
+ * @returns {Promise<Array>} Lista de processos
+ */
+async function getAllProcesses() {
+  return listProcessos();
+}
+
+/**
  * Atualiza um processo
  * @param {string} processId ID do processo
  * @param {Object} dadosProcesso Dados do processo
@@ -87,7 +96,8 @@ async function updateProcesso(processId, dadosProcesso) {
 const jsonData = {
   getProcessoById,
   listProcessos,
-  updateProcesso
+  updateProcesso,
+  getAllProcesses
 };
 
 // Exportação nomeada para compatibilidade

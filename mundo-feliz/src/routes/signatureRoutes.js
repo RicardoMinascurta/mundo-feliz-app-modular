@@ -3,6 +3,83 @@ import { signatureService } from '../services/SignatureService.js';
 import { pdfService } from '../services/pdfService.js';
 import { fileStorage } from '../services/fileStorage.js';
 import { saveBase64FileToUploads } from '../services/fileService.js';
+import fs from 'fs';
+import path from 'path';
+
+// Importar funções necessárias para o updateProcessoComArquivo
+const DATA_DIR = process.env.DATA_DIR || 'data';
+const DATA_FILE = path.join(DATA_DIR, 'processos.json');
+
+// Função para obter processos do arquivo JSON (copiada de fileRoutes.js)
+function getProcessos() {
+  try {
+    const processosPath = path.join(DATA_DIR, 'processos.json');
+    
+    // Verificar se o arquivo existe
+    if (!fs.existsSync(processosPath)) {
+      console.log('Arquivo de processos não encontrado. Criando novo arquivo vazio.');
+      fs.writeFileSync(processosPath, '[]', 'utf8');
+      return [];
+    }
+    
+    // Ler o arquivo de processos
+    const processosData = fs.readFileSync(processosPath, 'utf8');
+    const processos = JSON.parse(processosData || '[]');
+    
+    return processos;
+  } catch (error) {
+    console.error('Erro ao obter processos:', error);
+    return [];
+  }
+}
+
+// Função para atualizar os dados do processo com informações de um novo arquivo (copiada de fileRoutes.js)
+function updateProcessoComArquivo(processId, fileInfo) {
+  try {
+    console.log(`📝 API - Atualizando processo ${processId} com nova assinatura: ${JSON.stringify(fileInfo)}`);
+    
+    // Obter todos os processos
+    const processos = getProcessos();
+    
+    // Encontrar o processo pelo ID
+    const processoIndex = processos.findIndex(p => p.processId === processId);
+    
+    // Para assinaturas, sempre consideramos que é uma assinatura
+    const isSignature = true;
+    
+    if (processoIndex === -1) {
+      console.warn(`⚠️ API - Processo não encontrado para atualização: ${processId}`);
+      // Criar um novo processo se não existir
+      const novoProcesso = {
+        processId,
+        documentos: [],
+        assinaturas: [fileInfo],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      processos.push(novoProcesso);
+      console.log(`✅ API - Novo processo criado com ID: ${processId}`);
+    } else {
+      // Processo encontrado, atualizar
+      // É uma assinatura, adicionar ao array de assinaturas
+      if (!processos[processoIndex].assinaturas) {
+        processos[processoIndex].assinaturas = [];
+      }
+      processos[processoIndex].assinaturas.push(fileInfo);
+      processos[processoIndex].updatedAt = new Date().toISOString();
+      
+      console.log(`✅ API - Assinatura adicionada ao processo ${processId}`);
+    }
+    
+    // Salvar de volta no arquivo
+    fs.writeFileSync(DATA_FILE, JSON.stringify(processos, null, 2));
+    return true;
+  } catch (error) {
+    console.error(`❌ API - Erro ao atualizar processo com assinatura: ${error.message}`);
+    return false;
+  }
+}
 
 const router = express.Router();
 
@@ -50,6 +127,8 @@ router.post('/upload-assinatura', async (req, res) => {
       });
     }
     
+    console.log(`📤 API - Upload de assinatura para processo: ${processId}`);
+    
     // Salvar a assinatura na pasta uploads
     const fileInfo = await saveBase64FileToUploads(
       base64Data,
@@ -57,6 +136,18 @@ router.post('/upload-assinatura', async (req, res) => {
       'assinaturas',
       `assinatura_${Date.now()}.png`
     );
+    
+    console.log(`✅ API - Assinatura salva com sucesso: ${fileInfo.path}`);
+    
+    // Adicionar ao JSON de processos usando a mesma função que os documentos
+    updateProcessoComArquivo(processId, {
+      path: fileInfo.path,
+      type: fileInfo.type || 'image/png',
+      size: fileInfo.size,
+      name: `assinatura_${Date.now()}.png`,
+      documentType: 'assinatura',
+      uploadedAt: new Date().toISOString()
+    });
     
     res.json({
       success: true,

@@ -13,10 +13,8 @@ import { getPeriodoFromDatabaseId } from './src/config/notionDatabasesInfo.js';
 import logger from './src/services/LoggerService.js';
 import signatureRoutes from './src/routes/signatureRoutes.js';
 import fileRoutes from './src/api/fileRoutes.js';
-import { promptService } from './src/services/PromptService.js';
-import { execSync } from 'child_process';
-import sharp from 'sharp';
-import emailService from './src/services/emailService.js';
+import emailRoutes from './src/routes/emailRoutes.js';
+import emailService from './src/services/server/emailService.js';
 import apiRoutes from './src/api/index.js';
 import dotenv from 'dotenv';
 import { NOTION_API_URL, NOTION_API_VERSION } from './src/config/serverConfig.js';
@@ -32,9 +30,22 @@ import {
   normalizeString,
   isMinorProcess
 } from './src/config/processConfig.js';
+import { promptService } from './src/services/PromptService.js';
+import { execSync } from 'child_process';
+import sharp from 'sharp';
 
 // Carregar variáveis de ambiente
 dotenv.config();
+
+// Log para verificar configuração de email (remover dados sensíveis)
+console.log('Configuração de email carregada:', {
+  host: process.env.EMAIL_HOST,
+  port: process.env.EMAIL_PORT,
+  secure: process.env.EMAIL_SECURE,
+  user: process.env.EMAIL_USER,
+  from: process.env.EMAIL_FROM,
+  hasPassword: !!process.env.EMAIL_PASS
+});
 
 // Definir a constante para a chave da API Notion
 const NOTION_API_KEY = process.env.NOTION_API_KEY;
@@ -75,6 +86,60 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' })); // Para formulá
 
 // Rotas da API
 app.use('/api', apiRoutes);
+
+// Usar as rotas específicas
+app.use('/api', fileRoutes);
+app.use('/api', signatureRoutes);
+app.use('/api/email', emailRoutes);
+
+// Garantir que os diretórios de dados e uploads existam
+if (!fs.existsSync(DATA_DIR)) {
+  console.log(`Criando diretório de dados: ${DATA_DIR}`);
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+}
+
+if (!fs.existsSync(UPLOADS_DIR)) {
+  console.log(`Criando diretório de uploads: ${UPLOADS_DIR}`);
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
+
+// Verificar se o arquivo processos.json existe, se não, criá-lo com um array vazio
+if (!fs.existsSync(DATA_FILE)) {
+  fs.writeFileSync(DATA_FILE, JSON.stringify([], null, 2), 'utf8');
+  console.log(`Arquivo ${DATA_FILE} criado.`);
+}
+
+// Função para obter o template de prompt correto
+async function getPromptTemplate(processType, documentType) {
+  if (!processType || !documentType) {
+    return null;
+  }
+
+  try {
+    // Sempre carregar a versão mais recente do arquivo de templates usando dynamic import
+    // Adicionando timestamp como query param para evitar cache
+    const { promptTemplates } = await import(`./src/config/promptTemplates.js?t=${Date.now()}`);
+    
+    // Verificar se existe template para o tipo de processo
+    const processTemplates = promptTemplates[processType];
+    if (!processTemplates) {
+      console.warn(`Template não encontrado para o tipo de processo: ${processType}`);
+      return null;
+    }
+
+    // Verificar se existe template para o tipo de documento
+    const documentTemplate = processTemplates[documentType];
+    if (!documentTemplate) {
+      console.warn(`Template não encontrado para o tipo de documento: ${documentType} no processo: ${processType}`);
+      return null;
+    }
+
+    return documentTemplate;
+  } catch (error) {
+    console.error(`Erro ao carregar template: ${error.message}`);
+    return null;
+  }
+}
 
 // Configurar multer para uploads
 const storage = multer.diskStorage({
@@ -174,105 +239,6 @@ const upload = multer({
 // Rotas modularizadas
 app.use('/api', signatureRoutes);
 app.use('/api', fileRoutes);
-
-// Endpoint para enviar emails
-app.post('/api/email/send', async (req, res) => {
-  try {
-    console.log('Recebida requisição de email:', {
-      to: req.body.to,
-      subject: req.body.subject,
-      hasHtml: !!req.body.html,
-      cc: req.body.cc,
-      bcc: req.body.bcc
-    });
-
-    const { to, subject, html, cc, bcc } = req.body;
-    
-    // Validação básica dos campos obrigatórios
-    if (!to || !subject || !html) {
-      console.log('Campos em falta:', { to, subject, hasHtml: !!html });
-      logger.warn('Tentativa de envio de email sem campos obrigatórios');
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Os campos "to", "subject" e "html" são obrigatórios' 
-      });
-    }
-    
-    logger.info(`Recebida requisição de envio de email para: ${to}, assunto: ${subject}`);
-    
-    // Enviar email usando o serviço de email
-    console.log('Tentando enviar email...');
-    const resultado = await emailService.enviarEmail({ to, subject, html, cc, bcc });
-    console.log('Resultado do envio:', resultado);
-    
-    if (resultado.success) {
-      logger.info('Email enviado com sucesso');
-      return res.status(200).json(resultado);
-    } else {
-      console.error('Falha no envio:', resultado.error);
-      logger.error(`Falha no envio do email: ${resultado.error}`);
-      return res.status(500).json(resultado);
-    }
-  } catch (error) {
-    console.error('Erro detalhado:', error);
-    logger.error(`Erro no endpoint de envio de email: ${error.message}`);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Erro interno ao processar o envio do email',
-      error: error.message,
-      stack: error.stack
-    });
-  }
-});
-
-// Garantir que os diretórios de dados e uploads existam
-if (!fs.existsSync(DATA_DIR)) {
-  console.log(`Criando diretório de dados: ${DATA_DIR}`);
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-}
-
-if (!fs.existsSync(UPLOADS_DIR)) {
-  console.log(`Criando diretório de uploads: ${UPLOADS_DIR}`);
-  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-}
-
-// Verificar se o arquivo processos.json existe, se não, criá-lo com um array vazio
-if (!fs.existsSync(DATA_FILE)) {
-  fs.writeFileSync(DATA_FILE, JSON.stringify([], null, 2), 'utf8');
-  console.log(`Arquivo ${DATA_FILE} criado.`);
-}
-
-// Função para obter o template de prompt correto
-async function getPromptTemplate(processType, documentType) {
-  if (!processType || !documentType) {
-    return null;
-  }
-
-  try {
-    // Sempre carregar a versão mais recente do arquivo de templates usando dynamic import
-    // Adicionando timestamp como query param para evitar cache
-    const { promptTemplates } = await import(`./src/config/promptTemplates.js?t=${Date.now()}`);
-    
-    // Verificar se existe template para o tipo de processo
-    const processTemplates = promptTemplates[processType];
-    if (!processTemplates) {
-      console.warn(`Template não encontrado para o tipo de processo: ${processType}`);
-      return null;
-    }
-
-    // Verificar se existe template para o tipo de documento
-    const documentTemplate = processTemplates[documentType];
-    if (!documentTemplate) {
-      console.warn(`Template não encontrado para o tipo de documento: ${documentType} no processo: ${processType}`);
-      return null;
-    }
-
-    return documentTemplate;
-  } catch (error) {
-    console.error(`Erro ao carregar template: ${error.message}`);
-    return null;
-  }
-}
 
 // Endpoint para obter todos os processos
 app.get('/api/processos/all', (req, res) => {
@@ -1419,12 +1385,17 @@ function updateProcessoComArquivo(processId, fileInfo) {
     // Encontrar o processo pelo ID
     const processoIndex = processos.findIndex(p => p.processId === processId);
     
+    // Verificar se o arquivo é uma assinatura baseado no caminho ou tipo
+    const isSignature = fileInfo.path.includes('/assinaturas/') || 
+                        (fileInfo.documentType && fileInfo.documentType.toLowerCase().includes('assinatura'));
+    
     if (processoIndex === -1) {
       console.warn(`⚠️ API - Processo não encontrado para atualização: ${processId}`);
       // Criar um novo processo se não existir
       const novoProcesso = {
         processId,
-        documentos: [fileInfo],
+        documentos: isSignature ? [] : [fileInfo],
+        assinaturas: isSignature ? [fileInfo] : [],
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
@@ -1433,15 +1404,23 @@ function updateProcessoComArquivo(processId, fileInfo) {
       console.log(`✅ API - Novo processo criado com ID: ${processId}`);
     } else {
       // Processo encontrado, atualizar
-      if (!processos[processoIndex].documentos) {
-        processos[processoIndex].documentos = [];
+      if (isSignature) {
+        // É uma assinatura, adicionar ao array de assinaturas
+        if (!processos[processoIndex].assinaturas) {
+          processos[processoIndex].assinaturas = [];
+        }
+        processos[processoIndex].assinaturas.push(fileInfo);
+        console.log(`✅ API - Assinatura adicionada ao processo ${processId}`);
+      } else {
+        // É um documento normal, adicionar ao array de documentos
+        if (!processos[processoIndex].documentos) {
+          processos[processoIndex].documentos = [];
+        }
+        processos[processoIndex].documentos.push(fileInfo);
+        console.log(`✅ API - Documento adicionado ao processo ${processId}`);
       }
       
-      // Adicionar o novo arquivo à lista de documentos
-      processos[processoIndex].documentos.push(fileInfo);
       processos[processoIndex].updatedAt = new Date().toISOString();
-      
-      console.log(`✅ API - Processo ${processId} atualizado com novo arquivo`);
     }
     
     // Salvar de volta no arquivo

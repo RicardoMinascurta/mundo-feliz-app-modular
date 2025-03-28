@@ -2,9 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Box, Typography, Button, Paper, TextField, FormControlLabel, Switch, Snackbar, Alert, CircularProgress, Grid } from '@mui/material';
 import EditorSimples from '../emails/EditorSimples';
 import { emailTemplates } from '../../config';
+import { emailService } from '../../services';
 
 // Obter URL base da API
-const API_BASE_URL = window.location.protocol + '//' + window.location.hostname + ':3001';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
 const TemplateEmail = ({ processo, tipoProcesso, simplified = false, nomePessoa, tipoCPLP }) => {
   const [formData, setFormData] = useState({
@@ -100,68 +101,56 @@ const TemplateEmail = ({ processo, tipoProcesso, simplified = false, nomePessoa,
   };
   
   const handleSubmit = async () => {
-    setLoading(true);
-    
     try {
-      // Obter o conteúdo HTML do editor (que inclui a tabela do email)
-      const editorContent = editorRef.current.innerHTML;
+      setLoading(true);
       
-      // Encapsular o HTML com um documento completo para garantir que a tabela e o texto sejam exibidos corretamente
-      // Isso ajuda a manter as cores e alinhamentos em qualquer cliente de email
+      // Obter o conteúdo HTML do editor
+      const editorContent = editorRef.current?.innerHTML || '';
+      
+      // Construir o HTML completo
       const completeHtml = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${formData.subject}</title>
-  <style>
-    body { font-family: Arial, sans-serif; color: #000000; background-color: #ffffff; }
-    table { border-collapse: collapse; width: 440px; max-width: 440px; margin: 0; }
-    td { border: 1px solid #000000; padding: 7px; color: #000000 !important; height: 95%; }
-    p { margin: 0; padding: 0; color: #000000 !important; }
-    .value-cell { text-align: left; color: #000000 !important; }
-    .header-cell { background-color: #d4e5f7; color: #000000 !important; font-weight: bold; }
-  </style>
-</head>
-<body>
-  <div style="max-width: 640px; margin: 0; font-family: Arial, sans-serif; color: #000000;">
-    ${editorContent}
-  </div>
-</body>
-</html>
+        <div style="font-family: Arial, sans-serif; color: #000000; line-height: 1.5;">
+          ${editorContent}
+        </div>
       `;
       
-      // Preparar os dados para enviar
+      // Verificar se temos informação do PDF preenchido
+      const hasPdfAttachment = window.currentProcessedPdfInfo || 
+                               (processo?.pdfGerados?.some(pdf => pdf.documentType === 'pdf_preenchido'));
+      
+      console.log('Enviando email... Anexo PDF preenchido:', hasPdfAttachment ? 'SIM' : 'NÃO');
+      
+      // Preparar os dados do email
       const emailData = {
         to: formData.to,
-        cc: formData.cc,
-        bcc: formData.bcc,
+        cc: formData.cc || undefined,
+        bcc: formData.bcc || undefined,
         subject: formData.subject,
-        html: completeHtml
+        html: completeHtml,
+        processId: processo?.processId, // Adicionando ID do processo para buscar o PDF preenchido
+        pdfFilePath: window.currentProcessedPdfInfo?.filePath // Caminho do PDF no servidor
       };
       
       // Enviar o email usando o serviço de email
-      const response = await fetch(`${API_BASE_URL}/api/email/send`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(emailData),
-      });
+      const resultado = await emailService.enviarEmail(emailData);
       
-      const result = await response.json();
-      
-      if (response.ok) {
+      if (resultado.success) {
         setNotification({
           open: true,
-          message: 'Email enviado com sucesso!',
+          message: hasPdfAttachment 
+            ? 'Email enviado com sucesso com PDF preenchido anexado!' 
+            : 'Email enviado com sucesso!',
           severity: 'success'
         });
+        
+        // Limpar a referência global para evitar confusão em futuros envios
+        if (window.currentProcessedPdfInfo) {
+          window.currentProcessedPdfInfo = null;
+        }
       } else {
         setNotification({
           open: true,
-          message: `Erro ao enviar email: ${result.error}`,
+          message: `Erro ao enviar email: ${resultado.error}`,
           severity: 'error'
         });
       }

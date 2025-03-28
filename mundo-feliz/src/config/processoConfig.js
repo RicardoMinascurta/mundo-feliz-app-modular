@@ -4,10 +4,10 @@
  */
 
 const processoConfig = {
-  // Configuração para Reagrupamento Familiar - Cônjuge
+  // Configuração para Reagrupamento Cônjuge
   ReagrupamentoConjuge: {
     titulo: "Reagrupamento Familiar - Cônjuge",
-    descricao: "Processo de reagrupamento familiar para cônjuges",
+    descricao: "Processo de reagrupamento familiar para cônjuge",
     
     // Checkboxes para documentos necessários
     checkboxes: [
@@ -18,35 +18,63 @@ const processoConfig = {
       { id: "outros", label: "Outros" }
     ],
     
-    // Configuração para o painel de campos
+    // Configuração para o painel de campos baseado na estrutura do JSON
     painelCampos: [
       {
-        titulo: "Dados do Cônjuge a Reagrupar",
+        titulo: "Dados do Cônjuge",
         campos: [
-          { id: "pessoaReagrupada.nomeCompleto", label: "Nome Completo", tipo: "text" },
-          { id: "pessoaReagrupada.numeroPassaporte", label: "Número do Passaporte", tipo: "text" },
-          { id: "pessoaReagrupada.dataNascimento", label: "Data de Nascimento", tipo: "date" },
-          { id: "pessoaReagrupada.nacionalidade", label: "Nacionalidade", tipo: "text" },
-          { id: "pessoaReagrupada.dataValidadePassaporte", label: "Data de Validade do Passaporte", tipo: "date" }
+          // Atualizado para suporte à nova estrutura aninhada
+          { id: "documentos.pessoaReagrupada.nomeCompleto", label: "Nome Completo", tipo: "text" },
+          { id: "documentos.pessoaReagrupada.dataNascimento", label: "Data de Nascimento", tipo: "date" },
+          { id: "documentos.pessoaReagrupada.nacionalidade", label: "Nacionalidade", tipo: "text" },
+          { id: "documentos.pessoaReagrupada.numeroPassaporte", label: "Número do Passaporte", tipo: "text" },
+          { id: "documentos.pessoaReagrupada.dataValidadePassaporte", label: "Data de Validade do Passaporte", tipo: "date" },
+          { id: "documentos.pessoaReagrupada.sexo", label: "Sexo", tipo: "select", opcoes: [
+            { valor: "M", rotulo: "Masculino" },
+            { valor: "F", rotulo: "Feminino" }
+          ]},
+          { id: "documentos.pessoaReagrupada.parentesco", label: "Parentesco", tipo: "text" },
+          // Mantendo os caminhos antigos para compatibilidade com versões anteriores
+          { id: "pessoaReagrupada.nomeCompleto", label: "Nome Completo (Formato Antigo)", tipo: "text" },
+          { id: "pessoaReagrupada.dataNascimento", label: "Data de Nascimento (Formato Antigo)", tipo: "date" },
+          { id: "pessoaReagrupada.nacionalidade", label: "Nacionalidade (Formato Antigo)", tipo: "text" },
+          { id: "pessoaReagrupada.numeroPassaporte", label: "Número do Passaporte (Formato Antigo)", tipo: "text" },
+          { id: "pessoaReagrupada.dataValidadePassaporte", label: "Data de Validade do Passaporte (Formato Antigo)", tipo: "date" },
+          { id: "pessoaReagrupada.parentesco", label: "Parentesco (Formato Antigo)", tipo: "text" }
         ]
       },
       {
         titulo: "Dados do Requerente",
         campos: [
-          { id: "nomeCompleto", label: "Nome Completo", tipo: "text" },
-          { id: "numeroDocumento", label: "Número do Documento", tipo: "text" },
-          { id: "dataNascimento", label: "Data de Nascimento", tipo: "date" },
-          { id: "nacionalidade", label: "Nacionalidade", tipo: "text" },
-          { id: "dataValidade", label: "Data de Validade", tipo: "date" }
+          // Atualizado para suporte à nova estrutura aninhada
+          { id: "documentos.pessoaQueRegrupa.nomeCompleto", label: "Nome Completo", tipo: "text" },
+          { id: "documentos.pessoaQueRegrupa.numeroDocumento", label: "Número do Documento", tipo: "text" },
+          { id: "documentos.pessoaQueRegrupa.tipoDocumento", label: "Tipo de Documento", tipo: "text" },
+          { id: "documentos.pessoaQueRegrupa.dataNascimento", label: "Data de Nascimento", tipo: "date" },
+          { id: "documentos.pessoaQueRegrupa.nacionalidade", label: "Nacionalidade", tipo: "text" },
+          { id: "documentos.pessoaQueRegrupa.dataValidade", label: "Data de Validade", tipo: "date" },
+          { id: "documentos.pessoaQueRegrupa.parentesco", label: "Parentesco", tipo: "text" },
+          { id: "documentos.pessoaQueRegrupa.sexo", label: "Sexo", tipo: "select", opcoes: [
+            { valor: "M", rotulo: "Masculino" },
+            { valor: "F", rotulo: "Feminino" }
+          ]},
+          // Mantendo os caminhos antigos para compatibilidade com versões anteriores
+          { id: "pessoaQueRegrupa.nomeCompleto", label: "Nome Completo (Formato Antigo)", tipo: "text" },
+          { id: "pessoaQueRegrupa.numeroDocumento", label: "Número do Documento (Formato Antigo)", tipo: "text" },
+          { id: "pessoaQueRegrupa.tipoDocumento", label: "Tipo de Documento (Formato Antigo)", tipo: "text" },
+          { id: "pessoaQueRegrupa.dataNascimento", label: "Data de Nascimento (Formato Antigo)", tipo: "date" },
+          { id: "pessoaQueRegrupa.nacionalidade", label: "Nacionalidade (Formato Antigo)", tipo: "text" },
+          { id: "pessoaQueRegrupa.dataValidade", label: "Data de Validade (Formato Antigo)", tipo: "date" },
+          { id: "pessoaQueRegrupa.parentesco", label: "Parentesco (Formato Antigo)", tipo: "text" }
         ]
       }
     ],
     
-    // Template para exibir informações do processo
+    // Template para exibir informações do processo - usando variáveis que verificam ambos os caminhos
     templates: {
-      cartao: "{{pessoaReagrupada.nomeCompleto}} - Reagrupamento Familiar",
-      resumo: "Reagrupamento familiar de {{pessoaReagrupada.nomeCompleto}} ({{pessoaReagrupada.nacionalidade}}) com {{nomeCompleto}}",
-      detalhes: "Processo de reagrupamento familiar para cônjuge {{pessoaReagrupada.nomeCompleto}}, nascido em {{pessoaReagrupada.dataNascimento}}, portador do passaporte {{pessoaReagrupada.numeroPassaporte}} válido até {{pessoaReagrupada.dataValidadePassaporte}}."
+      cartao: "{{documentos.pessoaReagrupada.nomeCompleto || pessoaReagrupada.nomeCompleto}} - Reagrupamento Familiar",
+      resumo: "Reagrupamento familiar de {{documentos.pessoaReagrupada.nomeCompleto || pessoaReagrupada.nomeCompleto}} (cônjuge) com {{documentos.pessoaQueRegrupa.nomeCompleto || pessoaQueRegrupa.nomeCompleto}}",
+      detalhes: "Processo de reagrupamento familiar para cônjuge {{documentos.pessoaReagrupada.nomeCompleto || pessoaReagrupada.nomeCompleto}}, de nacionalidade {{documentos.pessoaReagrupada.nacionalidade || pessoaReagrupada.nacionalidade}}, nascido em {{documentos.pessoaReagrupada.dataNascimento || pessoaReagrupada.dataNascimento}}, portador do passaporte {{documentos.pessoaReagrupada.numeroPassaporte || pessoaReagrupada.numeroPassaporte}} válido até {{documentos.pessoaReagrupada.dataValidadePassaporte || pessoaReagrupada.dataValidadePassaporte}}. Requerente: {{documentos.pessoaQueRegrupa.nomeCompleto || pessoaQueRegrupa.nomeCompleto}}."
     }
   },
   
@@ -515,41 +543,52 @@ const processoConfig = {
       {
         titulo: "Dados da Pessoa a Reagrupar (Filho)",
         campos: [
-          { id: "pessoaReagrupada.nomeCompleto", label: "Nome Completo", tipo: "text" },
-          { id: "pessoaReagrupada.dataNascimento", label: "Data de Nascimento", tipo: "date" },
-          { id: "pessoaReagrupada.nacionalidade", label: "Nacionalidade", tipo: "text" },
-          { id: "pessoaReagrupada.numeroPassaporte", label: "Número do Passaporte", tipo: "text" },
-          { id: "pessoaReagrupada.dataValidadePassaporte", label: "Data de Validade do Passaporte", tipo: "date" },
-          { id: "pessoaReagrupada.sexo", label: "Sexo", tipo: "select", opcoes: [
+          { id: "documentos.pessoaReagrupada.nomeCompleto", label: "Nome Completo", tipo: "text" },
+          { id: "documentos.pessoaReagrupada.dataNascimento", label: "Data de Nascimento", tipo: "date" },
+          { id: "documentos.pessoaReagrupada.nacionalidade", label: "Nacionalidade", tipo: "text" },
+          { id: "documentos.pessoaReagrupada.numeroPassaporte", label: "Número do Passaporte", tipo: "text" },
+          { id: "documentos.pessoaReagrupada.dataValidadePassaporte", label: "Data de Validade do Passaporte", tipo: "date" },
+          { id: "documentos.pessoaReagrupada.sexo", label: "Sexo", tipo: "select", opcoes: [
             { valor: "M", rotulo: "Masculino" },
             { valor: "F", rotulo: "Feminino" }
           ]},
-          { id: "pessoaReagrupada.parentesco", label: "Parentesco", tipo: "text" }
+          { id: "pessoaReagrupada.nomeCompleto", label: "Nome Completo (Formato Antigo)", tipo: "text" },
+          { id: "pessoaReagrupada.dataNascimento", label: "Data de Nascimento (Formato Antigo)", tipo: "date" },
+          { id: "pessoaReagrupada.nacionalidade", label: "Nacionalidade (Formato Antigo)", tipo: "text" },
+          { id: "pessoaReagrupada.numeroPassaporte", label: "Número do Passaporte (Formato Antigo)", tipo: "text" },
+          { id: "pessoaReagrupada.dataValidadePassaporte", label: "Data de Validade do Passaporte (Formato Antigo)", tipo: "date" }
         ]
       },
       {
         titulo: "Dados do Pai/Mãe Residente",
         campos: [
-          { id: "pessoaQueRegrupa.parentesco", label: "Parentesco", tipo: "text" },
-          { id: "pessoaQueRegrupa.nomeCompleto", label: "Nome Completo", tipo: "text" },
-          { id: "pessoaQueRegrupa.numeroDocumento", label: "Número do Documento", tipo: "text" },
-          { id: "pessoaQueRegrupa.tipoDocumento", label: "Tipo de Documento", tipo: "text" },
-          { id: "pessoaQueRegrupa.dataNascimento", label: "Data de Nascimento", tipo: "date" },
-          { id: "pessoaQueRegrupa.nacionalidade", label: "Nacionalidade", tipo: "text" },
-          { id: "pessoaQueRegrupa.dataValidade", label: "Data de Validade", tipo: "date" },
-          { id: "pessoaQueRegrupa.sexo", label: "Sexo", tipo: "select", opcoes: [
+          { id: "documentos.pessoaQueRegrupa.parentesco", label: "Parentesco", tipo: "text" },
+          { id: "documentos.pessoaQueRegrupa.nomeCompleto", label: "Nome Completo", tipo: "text" },
+          { id: "documentos.pessoaQueRegrupa.numeroDocumento", label: "Número do Documento", tipo: "text" },
+          { id: "documentos.pessoaQueRegrupa.tipoDocumento", label: "Tipo de Documento", tipo: "text" },
+          { id: "documentos.pessoaQueRegrupa.dataNascimento", label: "Data de Nascimento", tipo: "date" },
+          { id: "documentos.pessoaQueRegrupa.nacionalidade", label: "Nacionalidade", tipo: "text" },
+          { id: "documentos.pessoaQueRegrupa.dataValidade", label: "Data de Validade", tipo: "date" },
+          { id: "documentos.pessoaQueRegrupa.sexo", label: "Sexo", tipo: "select", opcoes: [
             { valor: "M", rotulo: "Masculino" },
             { valor: "F", rotulo: "Feminino" }
-          ]}
+          ]},
+          { id: "pessoaQueRegrupa.parentesco", label: "Parentesco (Formato Antigo)", tipo: "text" },
+          { id: "pessoaQueRegrupa.nomeCompleto", label: "Nome Completo (Formato Antigo)", tipo: "text" },
+          { id: "pessoaQueRegrupa.numeroDocumento", label: "Número do Documento (Formato Antigo)", tipo: "text" },
+          { id: "pessoaQueRegrupa.tipoDocumento", label: "Tipo de Documento (Formato Antigo)", tipo: "text" },
+          { id: "pessoaQueRegrupa.dataNascimento", label: "Data de Nascimento (Formato Antigo)", tipo: "date" },
+          { id: "pessoaQueRegrupa.nacionalidade", label: "Nacionalidade (Formato Antigo)", tipo: "text" },
+          { id: "pessoaQueRegrupa.dataValidade", label: "Data de Validade (Formato Antigo)", tipo: "date" }
         ]
       }
     ],
     
-    // Template para exibir informações do processo
+    // Template para exibir informações do processo - usando variáveis que verificam ambos os caminhos
     templates: {
-      cartao: "{{pessoaReagrupada.nomeCompleto}} - Reagrupamento Familiar",
-      resumo: "Reagrupamento familiar de {{pessoaReagrupada.nomeCompleto}} ({{pessoaReagrupada.parentesco}}) com {{pessoaQueRegrupa.nomeCompleto}} ({{pessoaQueRegrupa.parentesco}})",
-      detalhes: "Processo de reagrupamento familiar para {{pessoaReagrupada.parentesco}} {{pessoaReagrupada.nomeCompleto}}, de nacionalidade {{pessoaReagrupada.nacionalidade}}, nascido em {{pessoaReagrupada.dataNascimento}}, portador do passaporte {{pessoaReagrupada.numeroPassaporte}} válido até {{pessoaReagrupada.dataValidadePassaporte}}. {{pessoaQueRegrupa.parentesco}}: {{pessoaQueRegrupa.nomeCompleto}}."
+      cartao: "{{documentos.pessoaReagrupada.nomeCompleto || pessoaReagrupada.nomeCompleto}} - Reagrupamento Familiar",
+      resumo: "Reagrupamento familiar de {{documentos.pessoaReagrupada.nomeCompleto || pessoaReagrupada.nomeCompleto}} ({{documentos.pessoaReagrupada.parentesco || pessoaReagrupada.parentesco}}) com {{documentos.pessoaQueRegrupa.nomeCompleto || pessoaQueRegrupa.nomeCompleto}} ({{documentos.pessoaQueRegrupa.parentesco || pessoaQueRegrupa.parentesco}})",
+      detalhes: "Processo de reagrupamento familiar para {{documentos.pessoaReagrupada.parentesco || pessoaReagrupada.parentesco}} {{documentos.pessoaReagrupada.nomeCompleto || pessoaReagrupada.nomeCompleto}}, de nacionalidade {{documentos.pessoaReagrupada.nacionalidade || pessoaReagrupada.nacionalidade}}, nascido em {{documentos.pessoaReagrupada.dataNascimento || pessoaReagrupada.dataNascimento}}, portador do passaporte {{documentos.pessoaReagrupada.numeroPassaporte || pessoaReagrupada.numeroPassaporte}} válido até {{documentos.pessoaReagrupada.dataValidadePassaporte || pessoaReagrupada.dataValidadePassaporte}}. {{documentos.pessoaQueRegrupa.parentesco || pessoaQueRegrupa.parentesco}}: {{documentos.pessoaQueRegrupa.nomeCompleto || pessoaQueRegrupa.nomeCompleto}}."
     }
   },
   
@@ -572,32 +611,58 @@ const processoConfig = {
       {
         titulo: "Dados da Pessoa a Reagrupar (Pai/Mãe)",
         campos: [
-          { id: "pessoaReagrupada.nomeCompleto", label: "Nome Completo", tipo: "text" },
-          { id: "pessoaReagrupada.dataNascimento", label: "Data de Nascimento", tipo: "date" },
-          { id: "pessoaReagrupada.nacionalidade", label: "Nacionalidade", tipo: "text" },
-          { id: "pessoaReagrupada.numeroPassaporte", label: "Número do Passaporte", tipo: "text" },
-          { id: "pessoaReagrupada.dataValidadePassaporte", label: "Data de Validade do Passaporte", tipo: "date" }
+          // Atualizado para suporte à nova estrutura aninhada
+          { id: "documentos.pessoaReagrupada.nomeCompleto", label: "Nome Completo", tipo: "text" },
+          { id: "documentos.pessoaReagrupada.dataNascimento", label: "Data de Nascimento", tipo: "date" },
+          { id: "documentos.pessoaReagrupada.nacionalidade", label: "Nacionalidade", tipo: "text" },
+          { id: "documentos.pessoaReagrupada.numeroPassaporte", label: "Número do Passaporte", tipo: "text" },
+          { id: "documentos.pessoaReagrupada.dataValidadePassaporte", label: "Data de Validade do Passaporte", tipo: "date" },
+          { id: "documentos.pessoaReagrupada.sexo", label: "Sexo", tipo: "select", opcoes: [
+            { valor: "M", rotulo: "Masculino" },
+            { valor: "F", rotulo: "Feminino" }
+          ]},
+          { id: "documentos.pessoaReagrupada.parentesco", label: "Parentesco", tipo: "text" },
+          // Mantendo os caminhos antigos para compatibilidade com versões anteriores
+          { id: "pessoaReagrupada.nomeCompleto", label: "Nome Completo (Formato Antigo)", tipo: "text" },
+          { id: "pessoaReagrupada.dataNascimento", label: "Data de Nascimento (Formato Antigo)", tipo: "date" },
+          { id: "pessoaReagrupada.nacionalidade", label: "Nacionalidade (Formato Antigo)", tipo: "text" },
+          { id: "pessoaReagrupada.numeroPassaporte", label: "Número do Passaporte (Formato Antigo)", tipo: "text" },
+          { id: "pessoaReagrupada.dataValidadePassaporte", label: "Data de Validade do Passaporte (Formato Antigo)", tipo: "date" },
+          { id: "pessoaReagrupada.parentesco", label: "Parentesco (Formato Antigo)", tipo: "text" }
         ]
       },
       {
         titulo: "Dados do Filho Residente",
         campos: [
-          { id: "pessoaQueRegrupa.nomeCompleto", label: "Nome Completo", tipo: "text" },
-          { id: "pessoaQueRegrupa.numeroDocumento", label: "Número do Documento", tipo: "text" },
-          { id: "pessoaQueRegrupa.tipoDocumento", label: "Tipo de Documento", tipo: "text" },
-          { id: "pessoaQueRegrupa.dataNascimento", label: "Data de Nascimento", tipo: "date" },
-          { id: "pessoaQueRegrupa.nacionalidade", label: "Nacionalidade", tipo: "text" },
-          { id: "pessoaQueRegrupa.dataValidade", label: "Data de Validade", tipo: "date" },
-          { id: "pessoaQueRegrupa.parentesco", label: "Parentesco", tipo: "text" }
+          // Atualizado para suporte à nova estrutura aninhada
+          { id: "documentos.pessoaQueRegrupa.nomeCompleto", label: "Nome Completo", tipo: "text" },
+          { id: "documentos.pessoaQueRegrupa.numeroDocumento", label: "Número do Documento", tipo: "text" },
+          { id: "documentos.pessoaQueRegrupa.tipoDocumento", label: "Tipo de Documento", tipo: "text" },
+          { id: "documentos.pessoaQueRegrupa.dataNascimento", label: "Data de Nascimento", tipo: "date" },
+          { id: "documentos.pessoaQueRegrupa.nacionalidade", label: "Nacionalidade", tipo: "text" },
+          { id: "documentos.pessoaQueRegrupa.dataValidade", label: "Data de Validade", tipo: "date" },
+          { id: "documentos.pessoaQueRegrupa.parentesco", label: "Parentesco", tipo: "text" },
+          { id: "documentos.pessoaQueRegrupa.sexo", label: "Sexo", tipo: "select", opcoes: [
+            { valor: "M", rotulo: "Masculino" },
+            { valor: "F", rotulo: "Feminino" }
+          ]},
+          // Mantendo os caminhos antigos para compatibilidade com versões anteriores
+          { id: "pessoaQueRegrupa.nomeCompleto", label: "Nome Completo (Formato Antigo)", tipo: "text" },
+          { id: "pessoaQueRegrupa.numeroDocumento", label: "Número do Documento (Formato Antigo)", tipo: "text" },
+          { id: "pessoaQueRegrupa.tipoDocumento", label: "Tipo de Documento (Formato Antigo)", tipo: "text" },
+          { id: "pessoaQueRegrupa.dataNascimento", label: "Data de Nascimento (Formato Antigo)", tipo: "date" },
+          { id: "pessoaQueRegrupa.nacionalidade", label: "Nacionalidade (Formato Antigo)", tipo: "text" },
+          { id: "pessoaQueRegrupa.dataValidade", label: "Data de Validade (Formato Antigo)", tipo: "date" },
+          { id: "pessoaQueRegrupa.parentesco", label: "Parentesco (Formato Antigo)", tipo: "text" }
         ]
       }
     ],
     
-    // Template para exibir informações do processo
+    // Template para exibir informações do processo - usando variáveis que verificam ambos os caminhos
     templates: {
-      cartao: "{{pessoaReagrupada.nomeCompleto}} - Reagrupamento Familiar",
-      resumo: "Reagrupamento familiar de {{pessoaReagrupada.nomeCompleto}} através do filho {{pessoaQueRegrupa.nomeCompleto}}",
-      detalhes: "Processo de reagrupamento familiar para {{pessoaReagrupada.nomeCompleto}}, de nacionalidade {{pessoaReagrupada.nacionalidade}}, nascido em {{pessoaReagrupada.dataNascimento}}, portador do passaporte {{pessoaReagrupada.numeroPassaporte}} válido até {{pessoaReagrupada.dataValidadePassaporte}}. Filho reagrupante: {{pessoaQueRegrupa.nomeCompleto}}."
+      cartao: "{{documentos.pessoaReagrupada.nomeCompleto || pessoaReagrupada.nomeCompleto}} - Reagrupamento Familiar",
+      resumo: "Reagrupamento familiar de {{documentos.pessoaReagrupada.nomeCompleto || pessoaReagrupada.nomeCompleto}} através do filho {{documentos.pessoaQueRegrupa.nomeCompleto || pessoaQueRegrupa.nomeCompleto}}",
+      detalhes: "Processo de reagrupamento familiar para {{documentos.pessoaReagrupada.nomeCompleto || pessoaReagrupada.nomeCompleto}}, de nacionalidade {{documentos.pessoaReagrupada.nacionalidade || pessoaReagrupada.nacionalidade}}, nascido em {{documentos.pessoaReagrupada.dataNascimento || pessoaReagrupada.dataNascimento}}, portador do passaporte {{documentos.pessoaReagrupada.numeroPassaporte || pessoaReagrupada.numeroPassaporte}} válido até {{documentos.pessoaReagrupada.dataValidadePassaporte || pessoaReagrupada.dataValidadePassaporte}}. Filho reagrupante: {{documentos.pessoaQueRegrupa.nomeCompleto || pessoaQueRegrupa.nomeCompleto}}."
     }
   },
   
@@ -620,40 +685,53 @@ const processoConfig = {
       {
         titulo: "Dados da Pessoa a Reagrupar (Menor)",
         campos: [
-          { id: "pessoaReagrupada.nomeCompleto", label: "Nome Completo", tipo: "text" },
-          { id: "pessoaReagrupada.dataNascimento", label: "Data de Nascimento", tipo: "date" },
-          { id: "pessoaReagrupada.nacionalidade", label: "Nacionalidade", tipo: "text" },
-          { id: "pessoaReagrupada.numeroPassaporte", label: "Número do Passaporte", tipo: "text" },
-          { id: "pessoaReagrupada.dataValidadePassaporte", label: "Data de Validade do Passaporte", tipo: "date" },
-          { id: "pessoaReagrupada.sexo", label: "Sexo", tipo: "select", opcoes: [
+          { id: "documentos.pessoaReagrupada.nomeCompleto", label: "Nome Completo", tipo: "text" },
+          { id: "documentos.pessoaReagrupada.dataNascimento", label: "Data de Nascimento", tipo: "date" },
+          { id: "documentos.pessoaReagrupada.nacionalidade", label: "Nacionalidade", tipo: "text" },
+          { id: "documentos.pessoaReagrupada.numeroPassaporte", label: "Número do Passaporte", tipo: "text" },
+          { id: "documentos.pessoaReagrupada.dataValidadePassaporte", label: "Data de Validade do Passaporte", tipo: "date" },
+          { id: "documentos.pessoaReagrupada.sexo", label: "Sexo", tipo: "select", opcoes: [
             { valor: "M", rotulo: "Masculino" },
             { valor: "F", rotulo: "Feminino" }
-          ]}
+          ]},
+          { id: "documentos.pessoaReagrupada.parentesco", label: "Parentesco", tipo: "text" },
+          { id: "pessoaReagrupada.nomeCompleto", label: "Nome Completo (Formato Antigo)", tipo: "text" },
+          { id: "pessoaReagrupada.dataNascimento", label: "Data de Nascimento (Formato Antigo)", tipo: "date" },
+          { id: "pessoaReagrupada.nacionalidade", label: "Nacionalidade (Formato Antigo)", tipo: "text" },
+          { id: "pessoaReagrupada.numeroPassaporte", label: "Número do Passaporte (Formato Antigo)", tipo: "text" },
+          { id: "pessoaReagrupada.dataValidadePassaporte", label: "Data de Validade do Passaporte (Formato Antigo)", tipo: "date" },
+          { id: "pessoaReagrupada.parentesco", label: "Parentesco (Formato Antigo)", tipo: "text" }
         ]
       },
       {
         titulo: "Dados do Tutor Residente",
         campos: [
-          { id: "pessoaQueRegrupa.nomeCompleto", label: "Nome Completo", tipo: "text" },
-          { id: "pessoaQueRegrupa.numeroDocumento", label: "Número do Documento", tipo: "text" },
-          { id: "pessoaQueRegrupa.tipoDocumento", label: "Tipo de Documento", tipo: "text" },
-          { id: "pessoaQueRegrupa.dataNascimento", label: "Data de Nascimento", tipo: "date" },
-          { id: "pessoaQueRegrupa.nacionalidade", label: "Nacionalidade", tipo: "text" },
-          { id: "pessoaQueRegrupa.dataValidade", label: "Data de Validade", tipo: "date" },
-          { id: "pessoaQueRegrupa.parentesco", label: "Parentesco", tipo: "text" },
-          { id: "pessoaQueRegrupa.sexo", label: "Sexo", tipo: "select", opcoes: [
+          { id: "documentos.pessoaQueRegrupa.nomeCompleto", label: "Nome Completo", tipo: "text" },
+          { id: "documentos.pessoaQueRegrupa.numeroDocumento", label: "Número do Documento", tipo: "text" },
+          { id: "documentos.pessoaQueRegrupa.tipoDocumento", label: "Tipo de Documento", tipo: "text" },
+          { id: "documentos.pessoaQueRegrupa.dataNascimento", label: "Data de Nascimento", tipo: "date" },
+          { id: "documentos.pessoaQueRegrupa.nacionalidade", label: "Nacionalidade", tipo: "text" },
+          { id: "documentos.pessoaQueRegrupa.dataValidade", label: "Data de Validade", tipo: "date" },
+          { id: "documentos.pessoaQueRegrupa.parentesco", label: "Parentesco", tipo: "text" },
+          { id: "documentos.pessoaQueRegrupa.sexo", label: "Sexo", tipo: "select", opcoes: [
             { valor: "M", rotulo: "Masculino" },
             { valor: "F", rotulo: "Feminino" }
-          ]}
+          ]},
+          { id: "pessoaQueRegrupa.nomeCompleto", label: "Nome Completo (Formato Antigo)", tipo: "text" },
+          { id: "pessoaQueRegrupa.numeroDocumento", label: "Número do Documento (Formato Antigo)", tipo: "text" },
+          { id: "pessoaQueRegrupa.tipoDocumento", label: "Tipo de Documento (Formato Antigo)", tipo: "text" },
+          { id: "pessoaQueRegrupa.dataNascimento", label: "Data de Nascimento (Formato Antigo)", tipo: "date" },
+          { id: "pessoaQueRegrupa.nacionalidade", label: "Nacionalidade (Formato Antigo)", tipo: "text" },
+          { id: "pessoaQueRegrupa.dataValidade", label: "Data de Validade (Formato Antigo)", tipo: "date" }
         ]
       }
     ],
     
-    // Template para exibir informações do processo
+    // Template para exibir informações do processo - usando variáveis que verificam ambos os caminhos
     templates: {
-      cartao: "{{pessoaReagrupada.nomeCompleto}} - Reagrupamento Familiar (Tutor)",
-      resumo: "Reagrupamento familiar de {{pessoaReagrupada.nomeCompleto}} através do tutor {{pessoaQueRegrupa.nomeCompleto}}",
-      detalhes: "Processo de reagrupamento familiar para menor {{pessoaReagrupada.nomeCompleto}}, de nacionalidade {{pessoaReagrupada.nacionalidade}}, nascido em {{pessoaReagrupada.dataNascimento}}, portador do passaporte {{pessoaReagrupada.numeroPassaporte}} válido até {{pessoaReagrupada.dataValidadePassaporte}}. Tutor: {{pessoaQueRegrupa.nomeCompleto}}."
+      cartao: "{{documentos.pessoaReagrupada.nomeCompleto || pessoaReagrupada.nomeCompleto}} - Reagrupamento Familiar (Tutor)",
+      resumo: "Reagrupamento familiar de {{documentos.pessoaReagrupada.nomeCompleto || pessoaReagrupada.nomeCompleto}} através do tutor {{documentos.pessoaQueRegrupa.nomeCompleto || pessoaQueRegrupa.nomeCompleto}}",
+      detalhes: "Processo de reagrupamento familiar para menor {{documentos.pessoaReagrupada.nomeCompleto || pessoaReagrupada.nomeCompleto}}, de nacionalidade {{documentos.pessoaReagrupada.nacionalidade || pessoaReagrupada.nacionalidade}}, nascido em {{documentos.pessoaReagrupada.dataNascimento || pessoaReagrupada.dataNascimento}}, portador do passaporte {{documentos.pessoaReagrupada.numeroPassaporte || pessoaReagrupada.numeroPassaporte}} válido até {{documentos.pessoaReagrupada.dataValidadePassaporte || pessoaReagrupada.dataValidadePassaporte}}. Tutor: {{documentos.pessoaQueRegrupa.nomeCompleto || pessoaQueRegrupa.nomeCompleto}}."
     }
   },
   
@@ -676,30 +754,58 @@ const processoConfig = {
       {
         titulo: "Dados da Pessoa a Reagrupar (Pai)",
         campos: [
-          { id: "pessoaReagrupada.nomeCompleto", label: "Nome Completo", tipo: "text" },
-          { id: "pessoaReagrupada.dataNascimento", label: "Data de Nascimento", tipo: "date" },
-          { id: "pessoaReagrupada.nacionalidade", label: "Nacionalidade", tipo: "text" },
-          { id: "pessoaReagrupada.numeroPassaporte", label: "Número do Passaporte", tipo: "text" },
-          { id: "pessoaReagrupada.dataValidadePassaporte", label: "Data de Validade do Passaporte", tipo: "date" },
-          { id: "pessoaReagrupada.sexo", label: "Sexo", tipo: "select", opcoes: [
+          // Atualizado para suporte à nova estrutura aninhada
+          { id: "documentos.pessoaReagrupada.nomeCompleto", label: "Nome Completo", tipo: "text" },
+          { id: "documentos.pessoaReagrupada.dataNascimento", label: "Data de Nascimento", tipo: "date" },
+          { id: "documentos.pessoaReagrupada.nacionalidade", label: "Nacionalidade", tipo: "text" },
+          { id: "documentos.pessoaReagrupada.numeroPassaporte", label: "Número do Passaporte", tipo: "text" },
+          { id: "documentos.pessoaReagrupada.dataValidadePassaporte", label: "Data de Validade do Passaporte", tipo: "date" },
+          { id: "documentos.pessoaReagrupada.sexo", label: "Sexo", tipo: "select", opcoes: [
             { valor: "M", rotulo: "Masculino" },
             { valor: "F", rotulo: "Feminino" }
-          ]}
+          ]},
+          { id: "documentos.pessoaReagrupada.parentesco", label: "Parentesco", tipo: "text" },
+          // Mantendo os caminhos antigos para compatibilidade com versões anteriores
+          { id: "pessoaReagrupada.nomeCompleto", label: "Nome Completo (Formato Antigo)", tipo: "text" },
+          { id: "pessoaReagrupada.dataNascimento", label: "Data de Nascimento (Formato Antigo)", tipo: "date" },
+          { id: "pessoaReagrupada.nacionalidade", label: "Nacionalidade (Formato Antigo)", tipo: "text" },
+          { id: "pessoaReagrupada.numeroPassaporte", label: "Número do Passaporte (Formato Antigo)", tipo: "text" },
+          { id: "pessoaReagrupada.dataValidadePassaporte", label: "Data de Validade do Passaporte (Formato Antigo)", tipo: "date" },
+          { id: "pessoaReagrupada.parentesco", label: "Parentesco (Formato Antigo)", tipo: "text" }
         ]
       },
       {
         titulo: "Dados do Filho Residente",
         campos: [
-          { id: "pessoaQueRegrupa.nomeCompleto", label: "Nome Completo", tipo: "text" },
-          { id: "pessoaQueRegrupa.numeroDocumento", label: "Número do Documento", tipo: "text" },
-          { id: "pessoaQueRegrupa.dataNascimento", label: "Data de Nascimento", tipo: "date" },
-          { id: "pessoaQueRegrupa.nacionalidade", label: "Nacionalidade", tipo: "text" },
-          { id: "pessoaQueRegrupa.dataValidade", label: "Data de Validade", tipo: "date" },
-          { id: "pessoaQueRegrupa.tipoDocumento", label: "Tipo de Documento", tipo: "select", opcoes: [
+          // Atualizado para suporte à nova estrutura aninhada
+          { id: "documentos.pessoaQueRegrupa.nomeCompleto", label: "Nome Completo", tipo: "text" },
+          { id: "documentos.pessoaQueRegrupa.numeroDocumento", label: "Número do Documento", tipo: "text" },
+          { id: "documentos.pessoaQueRegrupa.dataNascimento", label: "Data de Nascimento", tipo: "date" },
+          { id: "documentos.pessoaQueRegrupa.nacionalidade", label: "Nacionalidade", tipo: "text" },
+          { id: "documentos.pessoaQueRegrupa.dataValidade", label: "Data de Validade", tipo: "date" },
+          { id: "documentos.pessoaQueRegrupa.tipoDocumento", label: "Tipo de Documento", tipo: "select", opcoes: [
             { valor: "TR", rotulo: "TR" },
             { valor: "CC", rotulo: "CC" }
           ]},
-          { id: "pessoaQueRegrupa.parentesco", label: "Parentesco", tipo: "select", opcoes: [
+          { id: "documentos.pessoaQueRegrupa.parentesco", label: "Parentesco", tipo: "select", opcoes: [
+            { valor: "FILHO", rotulo: "Filho" },
+            { valor: "FILHA", rotulo: "Filha" }
+          ]},
+          { id: "documentos.pessoaQueRegrupa.sexo", label: "Sexo", tipo: "select", opcoes: [
+            { valor: "M", rotulo: "Masculino" },
+            { valor: "F", rotulo: "Feminino" }
+          ]},
+          // Mantendo os caminhos antigos para compatibilidade com versões anteriores
+          { id: "pessoaQueRegrupa.nomeCompleto", label: "Nome Completo (Formato Antigo)", tipo: "text" },
+          { id: "pessoaQueRegrupa.numeroDocumento", label: "Número do Documento (Formato Antigo)", tipo: "text" },
+          { id: "pessoaQueRegrupa.tipoDocumento", label: "Tipo de Documento (Formato Antigo)", tipo: "select", opcoes: [
+            { valor: "TR", rotulo: "TR" },
+            { valor: "CC", rotulo: "CC" }
+          ]},
+          { id: "pessoaQueRegrupa.dataNascimento", label: "Data de Nascimento (Formato Antigo)", tipo: "date" },
+          { id: "pessoaQueRegrupa.nacionalidade", label: "Nacionalidade (Formato Antigo)", tipo: "text" },
+          { id: "pessoaQueRegrupa.dataValidade", label: "Data de Validade (Formato Antigo)", tipo: "date" },
+          { id: "pessoaQueRegrupa.parentesco", label: "Parentesco (Formato Antigo)", tipo: "select", opcoes: [
             { valor: "FILHO", rotulo: "Filho" },
             { valor: "FILHA", rotulo: "Filha" }
           ]}
@@ -707,11 +813,11 @@ const processoConfig = {
       }
     ],
     
-    // Template para exibir informações do processo
+    // Template para exibir informações do processo - usando variáveis que verificam ambos os caminhos
     templates: {
-      cartao: "{{pessoaReagrupada.nomeCompleto}} - Reagrupamento Familiar (Pai Idoso)",
-      resumo: "Reagrupamento familiar de {{pessoaReagrupada.nomeCompleto}} (pai) através do filho {{pessoaQueRegrupa.nomeCompleto}}",
-      detalhes: "Processo de reagrupamento familiar para o pai {{pessoaReagrupada.nomeCompleto}}, de nacionalidade {{pessoaReagrupada.nacionalidade}}, nascido em {{pessoaReagrupada.dataNascimento}}, portador do passaporte {{pessoaReagrupada.numeroPassaporte}} válido até {{pessoaReagrupada.dataValidadePassaporte}}. Filho: {{pessoaQueRegrupa.nomeCompleto}}."
+      cartao: "{{documentos.pessoaReagrupada.nomeCompleto || pessoaReagrupada.nomeCompleto}} - Reagrupamento Familiar (Pai Idoso)",
+      resumo: "Reagrupamento familiar de {{documentos.pessoaReagrupada.nomeCompleto || pessoaReagrupada.nomeCompleto}} (pai) através do filho {{documentos.pessoaQueRegrupa.nomeCompleto || pessoaQueRegrupa.nomeCompleto}}",
+      detalhes: "Processo de reagrupamento familiar para o pai {{documentos.pessoaReagrupada.nomeCompleto || pessoaReagrupada.nomeCompleto}}, de nacionalidade {{documentos.pessoaReagrupada.nacionalidade || pessoaReagrupada.nacionalidade}}, nascido em {{documentos.pessoaReagrupada.dataNascimento || pessoaReagrupada.dataNascimento}}, portador do passaporte {{documentos.pessoaReagrupada.numeroPassaporte || pessoaReagrupada.numeroPassaporte}} válido até {{documentos.pessoaReagrupada.dataValidadePassaporte || pessoaReagrupada.dataValidadePassaporte}}. Filho: {{documentos.pessoaQueRegrupa.nomeCompleto || pessoaQueRegrupa.nomeCompleto}}."
     }
   },
   
@@ -775,13 +881,14 @@ const processoConfig = {
       {
         titulo: "Dados Pessoais",
         campos: [
-          { id: "nomeCompleto", label: "Nome Completo", tipo: "text" },
-          { id: "nacionalidade", label: "Nacionalidade", tipo: "text" },
-          { id: "dataNascimento", label: "Data de Nascimento", tipo: "date" },
-          { id: "numeroPassaporte", label: "Número do Passaporte", tipo: "text" },
-          { id: "dataValidadePassaporte", label: "Data de Validade do Passaporte", tipo: "date" },
-          { id: "numeroVisto", label: "Número do Visto", tipo: "text" },
-          { id: "sexo", label: "Sexo", tipo: "select", opcoes: [
+          // Apenas estrutura nova com documentos
+          { id: "documentos.nomeCompleto", label: "Nome Completo", tipo: "text" },
+          { id: "documentos.nacionalidade", label: "Nacionalidade", tipo: "text" },
+          { id: "documentos.dataNascimento", label: "Data de Nascimento", tipo: "date" },
+          { id: "documentos.numeroPassaporte", label: "Número do Passaporte", tipo: "text" },
+          { id: "documentos.dataValidadePassaporte", label: "Data de Validade do Passaporte", tipo: "date" },
+          { id: "documentos.numeroVisto", label: "Número do Visto", tipo: "text" },
+          { id: "documentos.sexo", label: "Sexo", tipo: "select", opcoes: [
             { valor: "M", rotulo: "Masculino" },
             { valor: "F", rotulo: "Feminino" }
           ]}
@@ -791,9 +898,9 @@ const processoConfig = {
     
     // Template para exibir informações do processo
     templates: {
-      cartao: "{{nomeCompleto}} - CPLP Maiores",
-      resumo: "Autorização de residência CPLP para {{nomeCompleto}} ({{nacionalidade}})",
-      detalhes: "Processo de autorização de residência CPLP para {{nomeCompleto}}, de nacionalidade {{nacionalidade}}, nascido em {{dataNascimento}}, portador do passaporte {{numeroPassaporte}} válido até {{dataValidadePassaporte}}."
+      cartao: "{{documentos.nomeCompleto}} - CPLP Maiores",
+      resumo: "Autorização de residência CPLP para {{documentos.nomeCompleto}} ({{documentos.nacionalidade}})",
+      detalhes: "Processo de autorização de residência CPLP para {{documentos.nomeCompleto}}, de nacionalidade {{documentos.nacionalidade}}, nascido em {{documentos.dataNascimento}}, portador do passaporte {{documentos.numeroPassaporte}} válido até {{documentos.dataValidadePassaporte}}."
     }
   },
   
@@ -816,27 +923,29 @@ const processoConfig = {
       {
         titulo: "Dados do Menor",
         campos: [
-          { id: "dados_do_menor.nome_completo", label: "Nome Completo", tipo: "text" },
-          { id: "dados_do_menor.nacionalidade", label: "Nacionalidade", tipo: "text" },
-          { id: "dados_do_menor.data_de_nascimento", label: "Data de Nascimento", tipo: "date" },
-          { id: "dados_do_menor.numero_do_passaporte", label: "Número do Passaporte", tipo: "text" }
+          // Apenas estrutura nova com documentos
+          { id: "documentos.dados_do_menor.nome_completo", label: "Nome Completo", tipo: "text" },
+          { id: "documentos.dados_do_menor.nacionalidade", label: "Nacionalidade", tipo: "text" },
+          { id: "documentos.dados_do_menor.data_de_nascimento", label: "Data de Nascimento", tipo: "date" },
+          { id: "documentos.dados_do_menor.numero_do_passaporte", label: "Número do Passaporte", tipo: "text" }
         ]
       },
       {
         titulo: "Dados do Responsável",
         campos: [
-          { id: "dados_do_responsavel.nome_do_responsavel", label: "Nome do Responsável", tipo: "text" },
-          { id: "dados_do_responsavel.numero_do_documento", label: "Número do Documento", tipo: "text" },
-          { id: "dados_do_responsavel.data_de_validade_do_documento", label: "Data de Validade do Documento", tipo: "date" }
+          // Apenas estrutura nova com documentos
+          { id: "documentos.dados_do_responsavel.nome_do_responsavel", label: "Nome do Responsável", tipo: "text" },
+          { id: "documentos.dados_do_responsavel.numero_do_documento", label: "Número do Documento", tipo: "text" },
+          { id: "documentos.dados_do_responsavel.data_de_validade_do_documento", label: "Data de Validade do Documento", tipo: "date" }
         ]
       }
     ],
     
     // Template para exibir informações do processo
     templates: {
-      cartao: "{{dados_do_menor.nome_completo}} - CPLP Menor",
-      resumo: "Autorização de residência CPLP para menor {{dados_do_menor.nome_completo}} ({{dados_do_menor.nacionalidade}})",
-      detalhes: "Processo de autorização de residência CPLP para menor {{dados_do_menor.nome_completo}}, de nacionalidade {{dados_do_menor.nacionalidade}}, nascido em {{dados_do_menor.data_de_nascimento}}, portador do passaporte {{dados_do_menor.numero_do_passaporte}}. Responsável: {{dados_do_responsavel.nome_do_responsavel}}."
+      cartao: "{{documentos.dados_do_menor.nome_completo}} - CPLP Menor",
+      resumo: "Autorização de residência CPLP para menor {{documentos.dados_do_menor.nome_completo}} ({{documentos.dados_do_menor.nacionalidade}})",
+      detalhes: "Processo de autorização de residência CPLP para menor {{documentos.dados_do_menor.nome_completo}}, de nacionalidade {{documentos.dados_do_menor.nacionalidade}}, nascido em {{documentos.dados_do_menor.data_de_nascimento}}, portador do passaporte {{documentos.dados_do_menor.numero_do_passaporte}}. Responsável: {{documentos.dados_do_responsavel.nome_do_responsavel}}."
     }
   },
   

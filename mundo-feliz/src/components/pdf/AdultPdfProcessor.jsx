@@ -8,18 +8,27 @@ const addSignatureToPdf = async (firstPage, pdfDoc, processo, font) => {
   try {
     console.log('Verificando assinatura para adicionar ao PDF...');
     
-    // Verificar se existem arquivos de assinatura no processo
-    if (!processo?.arquivosUpload || !Array.isArray(processo.arquivosUpload) || processo.arquivosUpload.length === 0) {
-      console.log('Nenhum arquivo de upload encontrado no processo');
-      return;
+    // Verificar se existem arquivos de assinatura no processo (verificar em arquivosUpload OU na nova propriedade assinaturas)
+    let assinaturaFile = null;
+    
+    // Tentar encontrar em arquivosUpload primeiro (compatibilidade com dados antigos)
+    if (processo?.arquivosUpload && Array.isArray(processo.arquivosUpload) && processo.arquivosUpload.length > 0) {
+      assinaturaFile = processo.arquivosUpload.find(file => 
+        (file.documentType === 'assinatura') || 
+        (file.path && file.path.replace(/\\/g, '/').includes('/assinaturas/')) || 
+        (file.name && file.name.startsWith('assinatura_'))
+      );
     }
     
-    // Encontrar o arquivo de assinatura
-    const assinaturaFile = processo.arquivosUpload.find(file => 
-      (file.documentType === 'assinatura') || 
-      (file.path && file.path.replace(/\\/g, '/').includes('/assinaturas/')) || 
-      (file.name && file.name.startsWith('assinatura_'))
-    );
+    // Se não encontrou, tentar na nova propriedade assinaturas
+    if (!assinaturaFile && processo?.assinaturas && Array.isArray(processo.assinaturas) && processo.assinaturas.length > 0) {
+      console.log('Verificando assinatura na propriedade "assinaturas"...');
+      assinaturaFile = processo.assinaturas.find(file => 
+        (file.documentType === 'assinatura') || 
+        (file.path && file.path.replace(/\\/g, '/').includes('/assinaturas/')) || 
+        (file.name && file.name.startsWith('assinatura_'))
+      );
+    }
     
     if (!assinaturaFile || !assinaturaFile.path) {
       console.log('Nenhum arquivo de assinatura válido encontrado');
@@ -32,6 +41,13 @@ const addSignatureToPdf = async (firstPage, pdfDoc, processo, font) => {
     
     // Usar o caminho normalizado em todas as estratégias subsequentes
     const assinaturaPath = nomalizadoPath;
+    
+    // Altura fixa para a assinatura, independentemente do tamanho original
+    const ALTURA_FIXA = 35; // Altura sempre será 35 pontos
+
+    // Coordenadas específicas para assinatura de adulto
+    const posX = 302; // Posição X fixa para assinatura de adulto
+    const posY = 142; // Posição Y fixa para assinatura de adulto
     
     // ESTRATÉGIA 1: Tentar acessar via endpoint da API
     try {
@@ -52,23 +68,18 @@ const addSignatureToPdf = async (firstPage, pdfDoc, processo, font) => {
           pdfImage = await pdfDoc.embedJpg(arrayBuffer);
         }
         
-        // Definir dimensões da imagem
+        // Definir dimensões da imagem - sempre usar a altura fixa
         const { width, height } = pdfImage.scale(1);
-        const alturaDesejada = 35;
-        const larguraProporcional = (width / height) * alturaDesejada;
+        const larguraProporcional = (width / height) * ALTURA_FIXA;
         
-        // Coordenadas específicas para assinatura de adulto
-        const posX = 302; // Posição X fixa para assinatura de adulto
-        const posY = 142; // Posição Y fixa para assinatura de adulto
+        console.log(`Adicionando assinatura em (${posX}, ${posY}) com dimensões ${larguraProporcional}x${ALTURA_FIXA}`);
         
-        console.log(`Adicionando assinatura em (${posX}, ${posY}) com dimensões ${larguraProporcional}x${alturaDesejada}`);
-        
-        // Adicionar a imagem da assinatura ao PDF
+        // Adicionar a imagem da assinatura ao PDF com altura fixa
         firstPage.drawImage(pdfImage, {
           x: posX,
           y: posY,
           width: larguraProporcional,
-          height: alturaDesejada
+          height: ALTURA_FIXA
         });
         
         console.log('✅ Assinatura adicionada com sucesso via API');
@@ -91,20 +102,15 @@ const addSignatureToPdf = async (firstPage, pdfDoc, processo, font) => {
           img.src = processo.assinatura;
         });
         
-        // Calcular dimensões proporcional com altura fixa de 35 pontos
-        const alturaDesejada = 35;
-        const larguraProporcional = (img.width / img.height) * alturaDesejada;
+        // Calcular dimensões proporcional mas com altura fixa
+        const larguraProporcional = (img.width / img.height) * ALTURA_FIXA;
         
-        // Coordenadas específicas para assinatura de adulto
-        const posX = 302; // Posição X fixa para assinatura de adulto
-        const posY = 142; // Posição Y fixa para assinatura de adulto
-        
-        // Adicionar a imagem da assinatura ao PDF
+        // Adicionar a imagem da assinatura ao PDF com altura fixa
         firstPage.drawImage(processo.assinatura, {
           x: posX,
           y: posY,
           width: larguraProporcional,
-          height: alturaDesejada
+          height: ALTURA_FIXA
         });
         
         console.log('✅ Assinatura adicionada com sucesso a partir do objeto do processo');
@@ -144,22 +150,17 @@ const addSignatureToPdf = async (firstPage, pdfDoc, processo, font) => {
             img.src = base64Data;
           });
           
-          // Calcular dimensões proporcional com altura fixa de 35 pontos
-          const alturaDesejada = 35;
-          const larguraProporcional = (img.width / img.height) * alturaDesejada;
+          // Calcular dimensões proporcional mas com altura fixa
+          const larguraProporcional = (img.width / img.height) * ALTURA_FIXA;
           
-          // Coordenadas específicas para assinatura de adulto
-          const posX = 302; // Posição X fixa para assinatura de adulto
-          const posY = 142; // Posição Y fixa para assinatura de adulto
+          console.log(`Adicionando assinatura em (${posX}, ${posY}) com dimensões ${larguraProporcional}x${ALTURA_FIXA}`);
           
-          console.log(`Adicionando assinatura em (${posX}, ${posY}) com dimensões ${larguraProporcional}x${alturaDesejada}`);
-          
-          // Adicionar a imagem da assinatura ao PDF
+          // Adicionar a imagem da assinatura ao PDF com altura fixa
           firstPage.drawImage(base64Data, {
             x: posX,
             y: posY,
             width: larguraProporcional,
-            height: alturaDesejada
+            height: ALTURA_FIXA
           });
           
           console.log('✅ Assinatura adicionada com sucesso via window.fs');
@@ -188,20 +189,15 @@ const addSignatureToPdf = async (firstPage, pdfDoc, processo, font) => {
           img.src = demoSignature;
         });
         
-        // Calcular dimensões proporcional com altura fixa de 35 pontos
-        const alturaDesejada = 35;
-        const larguraProporcional = (img.width / img.height) * alturaDesejada;
+        // Calcular dimensões proporcional mas com altura fixa
+        const larguraProporcional = (img.width / img.height) * ALTURA_FIXA;
         
-        // Coordenadas específicas para assinatura de adulto
-        const posX = 302; // Posição X fixa para assinatura de adulto
-        const posY = 142; // Posição Y fixa para assinatura de adulto
-        
-        // Adicionar a imagem da assinatura ao PDF
+        // Adicionar a imagem da assinatura ao PDF com altura fixa
         firstPage.drawImage(demoSignature, {
           x: posX,
           y: posY,
           width: larguraProporcional,
-          height: alturaDesejada
+          height: ALTURA_FIXA
         });
         
         console.log('✅ Assinatura de demonstração adicionada com sucesso');
@@ -233,17 +229,16 @@ const addSignatureToPdf = async (firstPage, pdfDoc, processo, font) => {
         pdfImage = await pdfDoc.embedJpg(await assinaturaUrl.arrayBuffer());
       }
       
-      // Definir dimensões da imagem
+      // Definir dimensões da imagem - sempre usar a altura fixa
       const { width, height } = pdfImage.scale(1);
-      const alturaDesejada = 35;
-      const larguraProporcional = (width / height) * alturaDesejada;
+      const larguraProporcional = (width / height) * ALTURA_FIXA;
       
-      // Adicionar a imagem ao PDF
+      // Adicionar a imagem ao PDF com altura fixa
       firstPage.drawImage(pdfImage, {
-        x: 302, // Posição X fixa para assinatura de adulto
-        y: 142, // Posição Y fixa para assinatura de adulto
+        x: posX,
+        y: posY,
         width: larguraProporcional,
-        height: alturaDesejada
+        height: ALTURA_FIXA
       });
       
       console.log('✅ Assinatura adicionada com sucesso via API');
@@ -275,17 +270,16 @@ const addSignatureToPdf = async (firstPage, pdfDoc, processo, font) => {
           pdfImage = await pdfDoc.embedJpg(imageArrayBuffer);
         }
         
-        // Definir dimensões da imagem
+        // Definir dimensões da imagem - sempre usar a altura fixa
         const { width, height } = pdfImage.scale(1);
-        const alturaDesejada = 35;
-        const larguraProporcional = (width / height) * alturaDesejada;
+        const larguraProporcional = (width / height) * ALTURA_FIXA;
         
-        // Adicionar a imagem ao PDF
+        // Adicionar a imagem ao PDF com altura fixa
         firstPage.drawImage(pdfImage, {
-          x: 302, // Posição X fixa para assinatura de adulto
-          y: 142, // Posição Y fixa para assinatura de adulto
+          x: posX,
+          y: posY,
           width: larguraProporcional,
-          height: alturaDesejada
+          height: ALTURA_FIXA
         });
         
         console.log('✅ Assinatura adicionada com sucesso via acesso direto');
@@ -823,8 +817,10 @@ const AdultPdfProcessor = ({ processId, personName, dataValidade, completePdfPat
           console.log('AdultPdfProcessor: Buscando assinatura para adicionar ao PDF');
           
           // Verificar se temos assinatura no objeto do processo
+          let temAssinatura = false;
+          
+          // Verificar nos arquivosUpload (formato antigo)
           if (dadosComProcessId?.arquivosUpload) {
-            // Encontrar arquivo de assinatura nos uploads
             const assinaturaFile = dadosComProcessId.arquivosUpload.find(file => 
               file.documentType === 'assinatura' || 
               file.path.includes('/assinaturas/') ||
@@ -832,15 +828,30 @@ const AdultPdfProcessor = ({ processId, personName, dataValidade, completePdfPat
             );
             
             if (assinaturaFile) {
-              console.log('AdultPdfProcessor: Assinatura encontrada:', assinaturaFile.path);
-              
-              // Usar a função auxiliar para adicionar a assinatura
-              await addSignatureToPdf(firstPage, pdfDoc, dadosComProcessId, font);
-            } else {
-              console.log('AdultPdfProcessor: Nenhuma assinatura encontrada nos uploads');
+              console.log('AdultPdfProcessor: Assinatura encontrada em arquivosUpload:', assinaturaFile.path);
+              temAssinatura = true;
             }
+          }
+          
+          // Verificar na propriedade assinaturas (novo formato)
+          if (!temAssinatura && dadosComProcessId?.assinaturas) {
+            const assinaturaFile = dadosComProcessId.assinaturas.find(file => 
+              file.documentType === 'assinatura' || 
+              file.path.includes('/assinaturas/') ||
+              file.name.includes('assinatura_')
+            );
+            
+            if (assinaturaFile) {
+              console.log('AdultPdfProcessor: Assinatura encontrada em assinaturas:', assinaturaFile.path);
+              temAssinatura = true;
+            }
+          }
+          
+          if (temAssinatura) {
+            // Usar a função auxiliar para adicionar a assinatura
+            await addSignatureToPdf(firstPage, pdfDoc, dadosComProcessId, font);
           } else {
-            console.log('AdultPdfProcessor: Não foi possível encontrar arquivosUpload no processo');
+            console.log('AdultPdfProcessor: Nenhuma assinatura encontrada no processo');
           }
         } catch (assinaturaError) {
           console.error('AdultPdfProcessor: Erro ao processar assinatura:', assinaturaError);
@@ -925,6 +936,49 @@ const AdultPdfProcessor = ({ processId, personName, dataValidade, completePdfPat
         window.currentProcessedPdfBlob = blob;
 
         console.log('AdultPdfProcessor: PDF processado com sucesso, URL criada:', url.substring(0, 30) + '...');
+        
+        // Salvar uma referência global para o PDF preenchido para uso posterior no email
+        window.currentProcessedPdfInfo = {
+          blob: blob,
+          url: url,
+          processId: processId,
+          personName: personName || "documento"
+        };
+        console.log('AdultPdfProcessor: Referência global do PDF preenchido criada para uso no email');
+        
+        // Salvar o PDF no servidor para uso posterior
+        try {
+          console.log('AdultPdfProcessor: Enviando PDF preenchido para o servidor...');
+          
+          // Criar um formulário para enviar o arquivo
+          const formData = new FormData();
+          formData.append('pdfFile', blob, `pdf_preenchido_${personName || 'documento'}.pdf`);
+          formData.append('processId', processId);
+          formData.append('personName', personName || 'documento');
+          
+          // Enviar para o servidor
+          const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+          const response = await fetch(`${API_BASE_URL}/api/email/save-pdf`, {
+            method: 'POST',
+            body: formData
+          });
+          
+          if (!response.ok) {
+            console.error('AdultPdfProcessor: Erro ao salvar PDF no servidor:', response.status, response.statusText);
+          } else {
+            const result = await response.json();
+            console.log('AdultPdfProcessor: PDF preenchido salvo no servidor:', result);
+            
+            // Atualizar informações do PDF com dados do servidor
+            window.currentProcessedPdfInfo = {
+              ...window.currentProcessedPdfInfo,
+              ...result,
+              isSavedOnServer: true
+            };
+          }
+        } catch (saveError) {
+          console.error('AdultPdfProcessor: Erro ao salvar PDF no servidor:', saveError);
+        }
         
         if (isMountedRef.current) {
           setPdfUrl(url);

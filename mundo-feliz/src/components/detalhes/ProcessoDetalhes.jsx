@@ -61,7 +61,9 @@ const ProcessoDetalhes = () => {
         
         if (tipoProcesso === 'CPLPMenor') {
           // Para processos CPLPMenor, tentar extrair dos dados do menor
-          nomePessoaExtraido = processoEncontrado?.campos?.dados_do_menor?.nome_completo_do_menor || 
+          nomePessoaExtraido = processoEncontrado?.campos?.documentos?.dados_do_menor?.nome_completo_do_menor || 
+                               processoEncontrado?.campos?.documentos?.dados_do_menor?.nome_completo || 
+                               processoEncontrado?.campos?.dados_do_menor?.nome_completo_do_menor || 
                                processoEncontrado?.campos?.dados_do_menor?.nome_completo || 
                                processoEncontrado?.dadosExtraidos?.campos?.dados_do_menor?.nome_completo_do_menor ||
                                processoEncontrado?.dadosExtraidos?.campos?.dados_do_menor?.nome_completo ||
@@ -69,11 +71,38 @@ const ProcessoDetalhes = () => {
                                processoEncontrado?.dadosExtraidos?.gpt?.dados_do_menor?.nome_completo || '';
           
           console.log("Nome extraído para CPLPMenor:", nomePessoaExtraido);
+        } else if (tipoProcesso === 'CPLPMaiores') {
+          // Para processos CPLPMaiores
+          nomePessoaExtraido = processoEncontrado?.campos?.documentos?.nomeCompleto ||
+                               processoEncontrado?.campos?.nomeCompleto ||
+                               processoEncontrado?.dadosExtraidos?.campos?.nomeCompleto ||
+                               processoEncontrado?.dadosExtraidos?.gpt?.nomeCompleto || '';
+          
+          console.log("Nome extraído para CPLPMaiores:", nomePessoaExtraido);
+        } else if (tipoProcesso.includes('Reagrupamento')) {
+          // Para processos de Reagrupamento, extrair o nome da pessoa reagrupada
+          // Primeiro verificar se está na estrutura documentos.pessoaReagrupada (nova estrutura)
+          if (processoEncontrado?.campos?.documentos?.pessoaReagrupada?.nomeCompleto) {
+            nomePessoaExtraido = processoEncontrado.campos.documentos.pessoaReagrupada.nomeCompleto;
+            console.log("Nome extraído da nova estrutura documentos.pessoaReagrupada:", nomePessoaExtraido);
+          } 
+          // Se não encontrou na nova estrutura, verificar na estrutura antiga
+          else if (processoEncontrado?.campos?.pessoaReagrupada?.nomeCompleto) {
+            nomePessoaExtraido = processoEncontrado.campos.pessoaReagrupada.nomeCompleto;
+            console.log("Nome extraído da estrutura antiga pessoaReagrupada:", nomePessoaExtraido);
+          }
+          // Verificar em dadosExtraidos se ainda não encontrou
+          else if (processoEncontrado?.dadosExtraidos?.campos?.pessoaReagrupada?.nomeCompleto) {
+            nomePessoaExtraido = processoEncontrado.dadosExtraidos.campos.pessoaReagrupada.nomeCompleto;
+          } else if (processoEncontrado?.dadosExtraidos?.gpt?.pessoaReagrupada?.nomeCompleto) {
+            nomePessoaExtraido = processoEncontrado.dadosExtraidos.gpt.pessoaReagrupada.nomeCompleto;
+          }
         } else {
           // Para outros processos
-          nomePessoaExtraido = processoEncontrado?.campos?.nomeCompleto || 
-                              processoEncontrado?.dadosExtraidos?.campos?.nomeCompleto ||
-                              processoEncontrado?.dadosExtraidos?.gpt?.nomeCompleto || '';
+          nomePessoaExtraido = processoEncontrado?.campos?.documentos?.nomeCompleto ||
+                               processoEncontrado?.campos?.nomeCompleto || 
+                               processoEncontrado?.dadosExtraidos?.campos?.nomeCompleto ||
+                               processoEncontrado?.dadosExtraidos?.gpt?.nomeCompleto || '';
           
           console.log("Nome extraído para processo regular:", nomePessoaExtraido);
         }
@@ -125,19 +154,70 @@ const ProcessoDetalhes = () => {
       // Atualizar o nome no lugar correto com base no tipo de processo
       if (tipoProcesso === 'CPLPMenor') {
         // Para processos CPLPMenor
-        if (updatedProcesso.campos?.dados_do_menor) {
-          updatedProcesso.campos.dados_do_menor.nome_completo = novoNome;
-          updatedProcesso.campos.dados_do_menor.nome_completo_do_menor = novoNome;
+        if (!updatedProcesso.campos) {
+          updatedProcesso.campos = {};
         }
+        
+        // Atualizar na estrutura antiga
+        if (!updatedProcesso.campos.dados_do_menor) {
+          updatedProcesso.campos.dados_do_menor = {};
+        }
+        updatedProcesso.campos.dados_do_menor.nome_completo = novoNome;
+        updatedProcesso.campos.dados_do_menor.nome_completo_do_menor = novoNome;
+        
+        // Atualizar na estrutura aninhada documentos
+        if (!updatedProcesso.campos.documentos) {
+          updatedProcesso.campos.documentos = {};
+        }
+        if (!updatedProcesso.campos.documentos.dados_do_menor) {
+          updatedProcesso.campos.documentos.dados_do_menor = {};
+        }
+        updatedProcesso.campos.documentos.dados_do_menor.nome_completo = novoNome;
+        updatedProcesso.campos.documentos.dados_do_menor.nome_completo_do_menor = novoNome;
+      } else if (tipoProcesso === 'CPLPMaiores') {
+        // Para processos CPLPMaiores
+        if (!updatedProcesso.campos) {
+          updatedProcesso.campos = {};
+        }
+        
+        // Atualizar na estrutura antiga
+        updatedProcesso.campos.nomeCompleto = novoNome;
+        
+        // Atualizar na estrutura aninhada documentos
+        if (!updatedProcesso.campos.documentos) {
+          updatedProcesso.campos.documentos = {};
+        }
+        updatedProcesso.campos.documentos.nomeCompleto = novoNome;
       } else if (tipoProcesso.includes('Reagrupamento')) {
         // Para processos de Reagrupamento
-        if (updatedProcesso.campos?.pessoaReagrupada) {
-          updatedProcesso.campos.pessoaReagrupada.nomeCompleto = novoNome;
+        // Atualizar tanto na estrutura antiga quanto na nova estrutura aninhada
+        if (!updatedProcesso.campos) {
+          updatedProcesso.campos = {};
         }
+        
+        if (!updatedProcesso.campos.pessoaReagrupada) {
+          updatedProcesso.campos.pessoaReagrupada = {};
+        }
+        updatedProcesso.campos.pessoaReagrupada.nomeCompleto = novoNome;
+        
+        // Atualizar também na estrutura aninhada documentos
+        if (!updatedProcesso.campos.documentos) {
+          updatedProcesso.campos.documentos = {};
+        }
+        if (!updatedProcesso.campos.documentos.pessoaReagrupada) {
+          updatedProcesso.campos.documentos.pessoaReagrupada = {};
+        }
+        updatedProcesso.campos.documentos.pessoaReagrupada.nomeCompleto = novoNome;
       } else {
         // Para outros processos
         if (updatedProcesso.campos) {
           updatedProcesso.campos.nomeCompleto = novoNome;
+          
+          // Atualizar também na estrutura aninhada documentos
+          if (!updatedProcesso.campos.documentos) {
+            updatedProcesso.campos.documentos = {};
+          }
+          updatedProcesso.campos.documentos.nomeCompleto = novoNome;
         }
       }
       
@@ -177,17 +257,31 @@ const ProcessoDetalhes = () => {
       const tipoProcesso = processo?.processId?.split('-')[0] || '';
       
       if (tipoProcesso === 'CPLPMenor') {
-        if (dadosAtualizados.dados_do_menor?.nome_completo_do_menor) {
+        if (dadosAtualizados.documentos?.dados_do_menor?.nome_completo_do_menor) {
+          setPessoaNome(dadosAtualizados.documentos.dados_do_menor.nome_completo_do_menor);
+        } else if (dadosAtualizados.documentos?.dados_do_menor?.nome_completo) {
+          setPessoaNome(dadosAtualizados.documentos.dados_do_menor.nome_completo);
+        } else if (dadosAtualizados.dados_do_menor?.nome_completo_do_menor) {
           setPessoaNome(dadosAtualizados.dados_do_menor.nome_completo_do_menor);
         } else if (dadosAtualizados.dados_do_menor?.nome_completo) {
           setPessoaNome(dadosAtualizados.dados_do_menor.nome_completo);
         }
+      } else if (tipoProcesso === 'CPLPMaiores') {
+        if (dadosAtualizados.documentos?.nomeCompleto) {
+          setPessoaNome(dadosAtualizados.documentos.nomeCompleto);
+        } else if (dadosAtualizados.nomeCompleto) {
+          setPessoaNome(dadosAtualizados.nomeCompleto);
+        }
       } else if (tipoProcesso.includes('Reagrupamento')) {
         if (dadosAtualizados.pessoaReagrupada?.nomeCompleto) {
           setPessoaNome(dadosAtualizados.pessoaReagrupada.nomeCompleto);
+        } else if (dadosAtualizados.documentos?.pessoaReagrupada?.nomeCompleto) {
+          setPessoaNome(dadosAtualizados.documentos.pessoaReagrupada.nomeCompleto);
         }
       } else if (dadosAtualizados.nomeCompleto) {
         setPessoaNome(dadosAtualizados.nomeCompleto);
+      } else if (dadosAtualizados.documentos?.nomeCompleto) {
+        setPessoaNome(dadosAtualizados.documentos.nomeCompleto);
       }
       
       // Disparar evento para regenerar o PDF
@@ -209,9 +303,13 @@ const ProcessoDetalhes = () => {
   const tipoProcesso = processo?.processId?.split('-')[0] || '';
   
   // Determinar o caminho do PDF completo
-  const pdfPath = processo?.arquivosUpload?.find(
+  const pdfPath = processo?.pdfGerados?.find(
     arquivo => arquivo.documentType === 'pdf_completo'
   )?.path || '';
+  
+  // Log para debug do caminho do PDF
+  console.log("PDF path encontrado:", pdfPath);
+  console.log("Estrutura do processo:", processo?.pdfGerados);
   
   if (loading) {
     return (

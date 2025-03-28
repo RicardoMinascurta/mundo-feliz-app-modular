@@ -53,8 +53,12 @@ const InboxPage = () => {
         if (tipoProcesso.includes('Reagrupamento')) {
           // Para processos de reagrupamento, buscar a pessoa reagrupada (beneficiário)
           
-          // 1. Verificar na estrutura campos.pessoaReagrupada (formato mais recente)
-          if (processo.campos?.pessoaReagrupada?.nomeCompleto) {
+          // Verificar a nova estrutura aninhada em campos.documentos
+          if (processo.campos?.documentos?.pessoaReagrupada?.nomeCompleto) {
+            nomeCompleto = processo.campos.documentos.pessoaReagrupada.nomeCompleto;
+          }
+          // 1. Verificar na estrutura campos.pessoaReagrupada (formato intermediário)
+          else if (processo.campos?.pessoaReagrupada?.nomeCompleto) {
             nomeCompleto = processo.campos.pessoaReagrupada.nomeCompleto;
           } 
           // 2. Verificar na estrutura data.dadosExtraidos.pessoaReagrupada
@@ -65,21 +69,24 @@ const InboxPage = () => {
           else {
             // Reagrupamento Cônjuge - verificar estruturas específicas
             if (tipoProcesso.includes('Conjuge')) {
-              nomeCompleto = processo.campos?.nomeConjuge || 
+              nomeCompleto = processo.campos?.documentos?.pessoaReagrupada?.nomeCompleto ||
+                            processo.campos?.nomeConjuge || 
                             processo.data?.dadosExtraidos?.nomeConjuge ||
                             processo.campos?.nomeReagrupado || 
                             processo.data?.dadosExtraidos?.nomeReagrupado;
             } 
             // Reagrupamento Filho - verificar campos específicos para filhos
             else if (tipoProcesso.includes('Filho')) {
-              nomeCompleto = processo.campos?.nomeFilho || 
+              nomeCompleto = processo.campos?.documentos?.pessoaReagrupada?.nomeCompleto ||
+                            processo.campos?.nomeFilho || 
                             processo.data?.dadosExtraidos?.nomeFilho ||
                             processo.campos?.nomeReagrupado || 
                             processo.data?.dadosExtraidos?.nomeReagrupado;
             }
             // Reagrupamento Pais/Idosos - verificar campos específicos
             else if (tipoProcesso.includes('Pais') || tipoProcesso.includes('Idosos')) {
-              nomeCompleto = processo.campos?.nomePai || 
+              nomeCompleto = processo.campos?.documentos?.pessoaReagrupada?.nomeCompleto ||
+                            processo.campos?.nomePai || 
                             processo.campos?.nomeMae || 
                             processo.data?.dadosExtraidos?.nomePai || 
                             processo.data?.dadosExtraidos?.nomeMae ||
@@ -88,14 +95,16 @@ const InboxPage = () => {
             }
             // Reagrupamento Tutor - verificar campos específicos
             else if (tipoProcesso.includes('Tutor')) {
-              nomeCompleto = processo.campos?.nomeMenor || 
+              nomeCompleto = processo.campos?.documentos?.pessoaReagrupada?.nomeCompleto ||
+                            processo.campos?.nomeMenor || 
                             processo.data?.dadosExtraidos?.nomeMenor ||
                             processo.campos?.nomeReagrupado || 
                             processo.data?.dadosExtraidos?.nomeReagrupado;
             }
             // Outros casos de reagrupamento ou fallback
             else {
-              nomeCompleto = processo.campos?.nomePessoaReagrupada || 
+              nomeCompleto = processo.campos?.documentos?.pessoaReagrupada?.nomeCompleto ||
+                            processo.campos?.nomePessoaReagrupada || 
                             processo.data?.dadosExtraidos?.nomePessoaReagrupada ||
                             processo.campos?.nomeBeneficiario || 
                             processo.data?.dadosExtraidos?.nomeBeneficiario ||
@@ -105,7 +114,10 @@ const InboxPage = () => {
           }
         } else {
           // Para outros tipos de processo, usar o nome normal da pessoa
-          nomeCompleto = processo.campos?.nomeCompleto || processo.data?.dadosExtraidos?.nomeCompleto;
+          // Primeiro verificar na nova estrutura campos.documentos.nomeCompleto
+          nomeCompleto = processo.campos?.documentos?.nomeCompleto || 
+                        processo.campos?.nomeCompleto || 
+                        processo.data?.dadosExtraidos?.nomeCompleto;
         }
         
         // Fallback para quando o nome não é encontrado
@@ -198,15 +210,17 @@ const InboxPage = () => {
         </Typography>
         
         <Tooltip title="Atualizar" arrow>
-          <IconButton 
-            onClick={handleRefresh} 
-            className="refresh-button"
-            disabled={loading || refreshing}
-          >
-            <Refresh 
-              className={refreshing ? "refresh-icon rotating" : "refresh-icon"} 
-            />
-          </IconButton>
+          <span>
+            <IconButton 
+              onClick={handleRefresh} 
+              className="refresh-button"
+              disabled={loading || refreshing}
+            >
+              <Refresh 
+                className={refreshing ? "refresh-icon rotating" : "refresh-icon"} 
+              />
+            </IconButton>
+          </span>
         </Tooltip>
       </Box>
       

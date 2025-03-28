@@ -45,11 +45,30 @@ const reagrupamentoTemplates = {
       // Motivo do pedido específico para este tipo de processo
       const motivoPedido = `REAGRUPAMENTO FAMILIAR ATRAVÉS ${textoQuemRegrupa} QUE TEM ${tituloDocumento.toUpperCase()}`;
       
-      // Usando o HTML exato da tabela original
+      // Usando abordagem mais compatível com clientes de e-mail
       return `
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Email</title>
+  <style>
+    body { margin: 0; padding: 0; font-family: Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #000000; background-color: #ffffff; }
+    p { width: auto !important; max-width: none !important; display: block !important; word-wrap: break-word !important; white-space: normal !important; 
+        font-family: Arial, sans-serif !important; font-size: 14px !important; line-height: 1.5 !important; color: #000000 !important; 
+        margin: 0 0 10px 0 !important; padding: 0 !important; text-align: left !important; }
+    div { width: auto !important; max-width: none !important; display: block !important; word-wrap: break-word !important; white-space: normal !important;
+         font-family: Arial, sans-serif !important; font-size: 14px !important; line-height: 1.5 !important; color: #000000 !important;
+         margin: 0 !important; padding: 0 !important; text-align: left !important; }
+  </style>
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #000000; background-color: #ffffff;">
+  <div style="width: 100% !important; max-width: none !important; margin: 0 auto;">
+    <div style="font-family: Arial, sans-serif; color: #000000; line-height: 1.5;">
+      
     <p>&nbsp;</p>
-    <p>&nbsp;</p>
-    <table border="1" cellspacing="0" cellpadding="5" style="width: 100%; border-collapse: collapse; border: 2px solid black;">
+    <table border="1" cellspacing="0" cellpadding="5" style="width: 480px; border-collapse: collapse; border: 2px solid black;">
       <tbody>
         <tr style="background-color: #d4e5f7;">
           <td colspan="2" align="center" style="border: 1px solid black; padding: 8px; font-weight: bold; text-align: center;">
@@ -57,90 +76,90 @@ const reagrupamentoTemplates = {
           </td>
         </tr>
         <tr>
-          <td style="width: 35%; border: 1px solid black; padding: 8px; background-color: white;">
+          <td style="width: 160px; border: 1px solid black; padding: 8px; background-color: white;">
             Motivo do Pedido<br>de Agendamento
           </td>
-          <td style="border: 1px solid black; padding: 8px; background-color: white;">
+          <td style="width: 320px; border: 1px solid black; padding: 8px; background-color: white;">
             ${motivoPedido}
           </td>
         </tr>
         <tr>
-          <td style="border: 1px solid black; padding: 8px; background-color: white;">
+          <td style="width: 160px; border: 1px solid black; padding: 8px; background-color: white;">
             Nome Completo
           </td>
-          <td style="border: 1px solid black; padding: 8px; background-color: white;">
+          <td style="width: 320px; border: 1px solid black; padding: 8px; background-color: white;">
             ${nomePessoaReagrupada}
           </td>
         </tr>
         <tr>
-          <td style="border: 1px solid black; padding: 8px; background-color: white;">
+          <td style="width: 160px; border: 1px solid black; padding: 8px; background-color: white;">
             Data de Nascimento
           </td>
-          <td style="border: 1px solid black; padding: 8px; background-color: white;">
+          <td style="width: 320px; border: 1px solid black; padding: 8px; background-color: white;">
             ${dataNascimentoReagrupada}
           </td>
         </tr>
         <tr>
-          <td style="border: 1px solid black; padding: 8px; background-color: white;">
+          <td style="width: 160px; border: 1px solid black; padding: 8px; background-color: white;">
             Nacionalidade
           </td>
-          <td style="border: 1px solid black; padding: 8px; background-color: white;">
+          <td style="width: 320px; border: 1px solid black; padding: 8px; background-color: white;">
             ${nacionalidadeReagrupada}
           </td>
         </tr>
         <tr>
-          <td style="border: 1px solid black; padding: 8px; background-color: white;">
+          <td style="width: 160px; border: 1px solid black; padding: 8px; background-color: white;">
             TR / CR / Visto
           </td>
-          <td style="border: 1px solid black; padding: 8px; background-color: white;">
+          <td style="width: 320px; border: 1px solid black; padding: 8px; background-color: white;">
             
           </td>
         </tr>
         <tr>
-          <td style="border: 1px solid black; padding: 8px; background-color: white;">
+          <td style="width: 160px; border: 1px solid black; padding: 8px; background-color: white;">
             Passaporte
           </td>
-          <td style="border: 1px solid black; padding: 8px; background-color: white;">
+          <td style="width: 320px; border: 1px solid black; padding: 8px; background-color: white;">
             ${numeroPassaporteReagrupada}
           </td>
         </tr>
         <tr>
-          <td style="border: 1px solid black; padding: 8px; background-color: white;">
+          <td style="width: 160px; border: 1px solid black; padding: 8px; background-color: white;">
             Área de Residência
           </td>
-          <td style="border: 1px solid black; padding: 8px; background-color: white;">
+          <td style="width: 320px; border: 1px solid black; padding: 8px; background-color: white;">
             LISBOA
           </td>
         </tr>
         <tr>
-          <td style="border: 1px solid black; padding: 8px; background-color: white;">
+          <td style="width: 160px; border: 1px solid black; padding: 8px; background-color: white;">
             Contacto Telefónico
           </td>
-          <td style="border: 1px solid black; padding: 8px; background-color: white;">
+          <td style="width: 320px; border: 1px solid black; padding: 8px; background-color: white;">
             
           </td>
         </tr>
         <tr>
-          <td style="border: 1px solid black; padding: 8px; background-color: white;">
+          <td style="width: 160px; border: 1px solid black; padding: 8px; background-color: white;">
             E-mail
           </td>
-          <td style="border: 1px solid black; padding: 8px; background-color: white;">
+          <td style="width: 320px; border: 1px solid black; padding: 8px; background-color: white;">
             
           </td>
         </tr>
         <tr>
-          <td style="border: 1px solid black; padding: 8px; background-color: white;">
+          <td style="width: 160px; border: 1px solid black; padding: 8px; background-color: white;">
             Posto de Atendimento do SEF preferencial
           </td>
-          <td style="border: 1px solid black; padding: 8px; background-color: white;">
+          <td style="width: 320px; border: 1px solid black; padding: 8px; background-color: white;">
             LISBOA
           </td>
         </tr>
         <tr>
-          <td style="border: 1px solid black; padding: 8px; vertical-align: top; background-color: white;">
+          <td style="width: 160px; border: 1px solid black; padding: 8px; vertical-align: top; background-color: white;">
             Observações
           </td>
-          <td style="border: 1px solid black; padding: 8px; height: 100px; vertical-align: top; background-color: white;">
+          <td style="width: 320px; border: 1px solid black; padding: 8px; height: 100px; vertical-align: top; background-color: white;">
             <p>${tituloParentesco}:</p>
             <p>Nome: ${nomePessoaQueRegrupa}<br>
             Data de nascimento: ${dataNascimentoQueRegrupa}<br>
@@ -149,25 +168,30 @@ const reagrupamentoTemplates = {
           </td>
         </tr>
         <tr>
-          <td style="border: 1px solid black; padding: 8px; vertical-align: top; background-color: white;">
+          <td style="width: 160px; border: 1px solid black; padding: 8px; vertical-align: top; background-color: white;">
             Data do Agendamento (a<br>preencher pelo SEF/CC)
           </td>
-          <td style="border: 1px solid black; padding: 8px; vertical-align: top; text-align: right; background-color: white;">
+          <td style="width: 320px; border: 1px solid black; padding: 8px; vertical-align: top; background-color: white;">
             <p style="text-align: right;">Motivo</p>
             <p style="text-align: right;">Local</p>
             <p style="text-align: right;">Data e Hora</p>
           </td>
         </tr>
         <tr>
-          <td style="border: 1px solid black; padding: 8px; vertical-align: top; background-color: white;">
+          <td style="width: 160px; border: 1px solid black; padding: 8px; vertical-align: top; background-color: white;">
             Observações SEF/CC
           </td>
-          <td style="border: 1px solid black; padding: 8px; height: 80px; vertical-align: top; background-color: white;"></td>
+          <td style="width: 320px; border: 1px solid black; padding: 8px; height: 80px; vertical-align: top; background-color: white;"></td>
         </tr>
       </tbody>
     </table>
     <p>&nbsp;</p>
-    <p>&nbsp;</p>`;
+    <p>-- Associação de Imigrantes Mundo Feliz Tel: 214 103 917 | 968 472 247 Email: geral.mundofeliz@gmail.com Website: mundofeliz.pt</p>
+    
+    </div>
+  </div>
+</body>
+</html>`;
     }
   },
   
@@ -207,11 +231,30 @@ const reagrupamentoTemplates = {
       // Motivo do pedido específico para este tipo de processo
       const motivoPedido = `REAGRUPAMENTO FAMILIAR ATRAVÉS DO CÔNJUGE QUE TEM ${tituloDocumento.toUpperCase()}`;
       
-      // HTML da tabela foi implementado
+      // HTML da tabela foi implementado (mesmo modelo do ReagrupamentoFilho)
       return `
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Email</title>
+  <style>
+    body { margin: 0; padding: 0; font-family: Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #000000; background-color: #ffffff; }
+    p { width: auto !important; max-width: none !important; display: block !important; word-wrap: break-word !important; white-space: normal !important; 
+        font-family: Arial, sans-serif !important; font-size: 14px !important; line-height: 1.5 !important; color: #000000 !important; 
+        margin: 0 0 10px 0 !important; padding: 0 !important; text-align: left !important; }
+    div { width: auto !important; max-width: none !important; display: block !important; word-wrap: break-word !important; white-space: normal !important;
+         font-family: Arial, sans-serif !important; font-size: 14px !important; line-height: 1.5 !important; color: #000000 !important;
+         margin: 0 !important; padding: 0 !important; text-align: left !important; }
+  </style>
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #000000; background-color: #ffffff;">
+  <div style="width: 100% !important; max-width: none !important; margin: 0 auto;">
+    <div style="font-family: Arial, sans-serif; color: #000000; line-height: 1.5;">
+      
     <p>&nbsp;</p>
-    <p>&nbsp;</p>
-    <table border="1" cellspacing="0" cellpadding="5" style="width: 100%; border-collapse: collapse; border: 2px solid black;">
+    <table border="1" cellspacing="0" cellpadding="5" style="width: 480px; border-collapse: collapse; border: 2px solid black;">
       <tbody>
         <tr style="background-color: #d4e5f7;">
           <td colspan="2" align="center" style="border: 1px solid black; padding: 8px; font-weight: bold; text-align: center;">
@@ -219,90 +262,90 @@ const reagrupamentoTemplates = {
           </td>
         </tr>
         <tr>
-          <td style="width: 35%; border: 1px solid black; padding: 8px; background-color: white;">
+          <td style="width: 160px; border: 1px solid black; padding: 8px; background-color: white;">
             Motivo do Pedido<br>de Agendamento
           </td>
-          <td style="border: 1px solid black; padding: 8px; background-color: white;">
+          <td style="width: 320px; border: 1px solid black; padding: 8px; background-color: white;">
             ${motivoPedido}
           </td>
         </tr>
         <tr>
-          <td style="border: 1px solid black; padding: 8px; background-color: white;">
+          <td style="width: 160px; border: 1px solid black; padding: 8px; background-color: white;">
             Nome Completo
           </td>
-          <td style="border: 1px solid black; padding: 8px; background-color: white;">
+          <td style="width: 320px; border: 1px solid black; padding: 8px; background-color: white;">
             ${nomePessoaReagrupada}
           </td>
         </tr>
         <tr>
-          <td style="border: 1px solid black; padding: 8px; background-color: white;">
+          <td style="width: 160px; border: 1px solid black; padding: 8px; background-color: white;">
             Data de Nascimento
           </td>
-          <td style="border: 1px solid black; padding: 8px; background-color: white;">
+          <td style="width: 320px; border: 1px solid black; padding: 8px; background-color: white;">
             ${dataNascimentoReagrupada}
           </td>
         </tr>
         <tr>
-          <td style="border: 1px solid black; padding: 8px; background-color: white;">
+          <td style="width: 160px; border: 1px solid black; padding: 8px; background-color: white;">
             Nacionalidade
           </td>
-          <td style="border: 1px solid black; padding: 8px; background-color: white;">
+          <td style="width: 320px; border: 1px solid black; padding: 8px; background-color: white;">
             ${nacionalidadeReagrupada}
           </td>
         </tr>
         <tr>
-          <td style="border: 1px solid black; padding: 8px; background-color: white;">
+          <td style="width: 160px; border: 1px solid black; padding: 8px; background-color: white;">
             TR / CR / Visto
           </td>
-          <td style="border: 1px solid black; padding: 8px; background-color: white;">
+          <td style="width: 320px; border: 1px solid black; padding: 8px; background-color: white;">
             
           </td>
         </tr>
         <tr>
-          <td style="border: 1px solid black; padding: 8px; background-color: white;">
+          <td style="width: 160px; border: 1px solid black; padding: 8px; background-color: white;">
             Passaporte
           </td>
-          <td style="border: 1px solid black; padding: 8px; background-color: white;">
+          <td style="width: 320px; border: 1px solid black; padding: 8px; background-color: white;">
             ${numeroPassaporteReagrupada}
           </td>
         </tr>
         <tr>
-          <td style="border: 1px solid black; padding: 8px; background-color: white;">
+          <td style="width: 160px; border: 1px solid black; padding: 8px; background-color: white;">
             Área de Residência
           </td>
-          <td style="border: 1px solid black; padding: 8px; background-color: white;">
+          <td style="width: 320px; border: 1px solid black; padding: 8px; background-color: white;">
             LISBOA
           </td>
         </tr>
         <tr>
-          <td style="border: 1px solid black; padding: 8px; background-color: white;">
+          <td style="width: 160px; border: 1px solid black; padding: 8px; background-color: white;">
             Contacto Telefónico
           </td>
-          <td style="border: 1px solid black; padding: 8px; background-color: white;">
+          <td style="width: 320px; border: 1px solid black; padding: 8px; background-color: white;">
             
           </td>
         </tr>
         <tr>
-          <td style="border: 1px solid black; padding: 8px; background-color: white;">
+          <td style="width: 160px; border: 1px solid black; padding: 8px; background-color: white;">
             E-mail
           </td>
-          <td style="border: 1px solid black; padding: 8px; background-color: white;">
+          <td style="width: 320px; border: 1px solid black; padding: 8px; background-color: white;">
             
           </td>
         </tr>
         <tr>
-          <td style="border: 1px solid black; padding: 8px; background-color: white;">
+          <td style="width: 160px; border: 1px solid black; padding: 8px; background-color: white;">
             Posto de Atendimento do SEF preferencial
           </td>
-          <td style="border: 1px solid black; padding: 8px; background-color: white;">
+          <td style="width: 320px; border: 1px solid black; padding: 8px; background-color: white;">
             LISBOA
           </td>
         </tr>
         <tr>
-          <td style="border: 1px solid black; padding: 8px; vertical-align: top; background-color: white;">
+          <td style="width: 160px; border: 1px solid black; padding: 8px; vertical-align: top; background-color: white;">
             Observações
           </td>
-          <td style="border: 1px solid black; padding: 8px; height: 100px; vertical-align: top; background-color: white;">
+          <td style="width: 320px; border: 1px solid black; padding: 8px; height: 100px; vertical-align: top; background-color: white;">
             <p>Dados do CÔNJUGE:</p>
             <p>Nome: ${nomePessoaQueRegrupa}<br>
             Data de nascimento: ${dataNascimentoQueRegrupa}<br>
@@ -311,25 +354,30 @@ const reagrupamentoTemplates = {
           </td>
         </tr>
         <tr>
-          <td style="border: 1px solid black; padding: 8px; vertical-align: top; background-color: white;">
+          <td style="width: 160px; border: 1px solid black; padding: 8px; vertical-align: top; background-color: white;">
             Data do Agendamento (a<br>preencher pelo SEF/CC)
           </td>
-          <td style="border: 1px solid black; padding: 8px; vertical-align: top; text-align: right; background-color: white;">
+          <td style="width: 320px; border: 1px solid black; padding: 8px; vertical-align: top; background-color: white;">
             <p style="text-align: right;">Motivo</p>
             <p style="text-align: right;">Local</p>
             <p style="text-align: right;">Data e Hora</p>
           </td>
         </tr>
         <tr>
-          <td style="border: 1px solid black; padding: 8px; vertical-align: top; background-color: white;">
+          <td style="width: 160px; border: 1px solid black; padding: 8px; vertical-align: top; background-color: white;">
             Observações SEF/CC
           </td>
-          <td style="border: 1px solid black; padding: 8px; height: 80px; vertical-align: top; background-color: white;"></td>
+          <td style="width: 320px; border: 1px solid black; padding: 8px; height: 80px; vertical-align: top; background-color: white;"></td>
         </tr>
       </tbody>
     </table>
     <p>&nbsp;</p>
-    <p>&nbsp;</p>`;
+    <p>-- Associação de Imigrantes Mundo Feliz Tel: 214 103 917 | 968 472 247 Email: geral.mundofeliz@gmail.com Website: mundofeliz.pt</p>
+    
+    </div>
+  </div>
+</body>
+</html>`;
     }
   },
   
