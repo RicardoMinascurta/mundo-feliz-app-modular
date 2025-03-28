@@ -23,7 +23,10 @@ const InformacaoUpload = ({ selectedPerson, onBack, onSuccess, tipoInformacao = 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const navigate = useNavigate();
-  const { personId, processId } = useParams();
+  const { personId, processId: urlProcessId } = useParams();
+  
+  // Estado para o processId
+  const [processId, setProcessId] = useState(urlProcessId || null);
   
   const {
     uploadState,
@@ -31,8 +34,7 @@ const InformacaoUpload = ({ selectedPerson, onBack, onSuccess, tipoInformacao = 
     updateSignature,
     setDocumentError,
     submitDocuments,
-    processDocuments,
-    ensureValidProcessId
+    processDocuments
   } = useUpload(
     uploadService, 
     tipoInformacao === 'portal' ? 'InfoPortal' : 'InfoPresencial', 
@@ -42,6 +44,57 @@ const InformacaoUpload = ({ selectedPerson, onBack, onSuccess, tipoInformacao = 
   const [isProcessing, setIsProcessing] = useState(false);
   const [processResult, setProcessResult] = useState(null);
   const [processError, setProcessError] = useState(null);
+
+  // Função para verificar o formato do ID e gerar um novo se necessário
+  const gerarProcessId = async () => {
+    // Verificar se o ID atual existe e se está no formato correto
+    const formatoValido = processId && /^[A-Za-z]+-\d+-[0-9a-f]+$/.test(processId);
+    
+    if (formatoValido) {
+      console.log(`Usando ID de processo existente (válido): ${processId}`);
+      return processId;
+    }
+    
+    console.log('Tentando gerar novo ID com formato correto...');
+      
+    try {
+      // Em vez de chamar a API, vamos gerar localmente
+      const timestamp = new Date().toISOString().replace(/[-:.TZ]/g, "").substring(0, 8);
+      const randomHex = Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
+      const prefixo = tipoInformacao === 'portal' ? 'InfoPortal' : 'InfoPresencial';
+      const novoId = `${prefixo}-${timestamp}-${randomHex}`;
+      
+      console.log(`Novo processo ID gerado localmente: ${novoId}`);
+      setProcessId(novoId);
+      
+      if (navigate && !window.location.pathname.includes(novoId)) {
+        const currentPath = window.location.pathname;
+        let newPath;
+        
+        if (currentPath.endsWith('/')) {
+          newPath = `${currentPath}${novoId}`;
+        } else {
+          const parts = currentPath.split('/');
+          
+          const lastPart = parts[parts.length - 1];
+          if (lastPart && lastPart.includes('-')) {
+            parts[parts.length - 1] = novoId;
+            newPath = parts.join('/');
+          } else {
+            newPath = `${currentPath}/${novoId}`;
+          }
+        }
+        
+        navigate(newPath, { replace: true });
+      }
+      
+      return novoId;
+    } catch (error) {
+      console.error('Erro ao gerar processId:', error);
+      setProcessError('Não foi possível iniciar o processo. Tente novamente.');
+      return null;
+    }
+  };
 
   const handleFileSelected = async (fieldName, file) => {
     try {
@@ -62,7 +115,10 @@ const InformacaoUpload = ({ selectedPerson, onBack, onSuccess, tipoInformacao = 
     setProcessError(null);
     
     try {
-      const validProcessId = await ensureValidProcessId();
+      const validProcessId = await gerarProcessId();
+      if (!validProcessId) {
+        throw new Error('Não foi possível gerar um ID válido para o processo');
+      }
       
       console.log("📝 INFO-UPLOAD: Iniciando submissão de documentos", {
         processId: validProcessId,

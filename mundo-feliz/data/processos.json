@@ -1,18 +1,50 @@
 [
   {
-    "processId": "CPLPMaiores-m8ru4l1x-9172bdad",
+    "pdfPath": "uploads/CPLP/Maiores/CPLPMaiores-m8s0kx6f-723e9925/pdfs/pdf_completo_1743119932323.pdf",
+    "processId": "CPLPMaiores-m8s0kx6f-723e9925",
     "documentos": [
       {
-        "path": "uploads/CPLP/Maiores/CPLPMaiores-m8ru4l1x-9172bdad/documentos/passport_1743109067359.png",
+        "path": "uploads/CPLP/Maiores/CPLPMaiores-m8s0kx6f-723e9925/documentos/passport_1743119916899.png",
         "type": "image/png",
         "size": 293963,
         "name": "passaporte pai_teste.png",
         "documentType": "passport",
-        "uploadedAt": "2025-03-27T20:57:47.365Z"
+        "uploadedAt": "2025-03-27T23:58:36.904Z"
       }
     ],
-    "createdAt": "2025-03-27T20:57:47.368Z",
-    "updatedAt": "2025-03-27T20:57:47.368Z",
+    "pdfGerados": [
+      {
+        "path": "uploads/CPLP/Maiores/CPLPMaiores-m8s0kx6f-723e9925/pdfs/pdf_completo_1743119932323.pdf",
+        "type": "application/pdf",
+        "size": 688960,
+        "name": "documentos_CPLPMaiores-m8s0kx6f-723e9925_2025-03-27T23-58-52.171Z.pdf",
+        "documentType": "pdf_completo",
+        "uploadedAt": "2025-03-27T23:58:52.326Z"
+      },
+      {
+        "path": "uploads/CPLP/Maiores/CPLPMaiores-m8s0kx6f-723e9925/pdfs/documentos_CPLPMaiores-m8s0kx6f-723e9925_2025-03-27T23-58-52.171Z.pdf",
+        "type": "documentos_completo",
+        "mimeType": "application/pdf",
+        "createdAt": "2025-03-27T23:58:52.344Z"
+      }
+    ],
+    "updatedAt": "2025-03-27T23:58:52.346Z",
+    "createdAt": "2025-03-27T23:58:36.905Z"
+  },
+  {
+    "processId": "CPLPMaiores-m8s0tpc7-679aceb9",
+    "documentos": [
+      {
+        "path": "uploads/CPLP/Maiores/CPLPMaiores-m8s0tpc7-679aceb9/documentos/passport_1743120339716.png",
+        "type": "image/png",
+        "size": 293963,
+        "name": "passaporte pai_teste.png",
+        "documentType": "passport",
+        "uploadedAt": "2025-03-28T00:05:39.720Z"
+      }
+    ],
+    "createdAt": "2025-03-28T00:05:39.721Z",
+    "updatedAt": "2025-03-28T00:05:39.721Z",
     "campos": {
       "documentos": {
         "nomeCompleto": "MÁRIO TCHUDA SILVÉRIO",
@@ -23,136 +55,14 @@
         "numeroVisto": ""
       }
     },
-    "arquivosUpload": [
+    "pdfGerados": [
       {
-        "path": "uploads/CPLP/Maiores/CPLPMaiores-m8ru4l1x-9172bdad/pdfs/pdf_completo_1743109082959.pdf",
+        "path": "uploads/CPLP/Maiores/CPLPMaiores-m8s0tpc7-679aceb9/pdfs/pdf_completo_1743120356516.pdf",
         "type": "application/pdf",
         "size": 688960,
-        "name": "documentos_CPLPMaiores-m8ru4l1x-9172bdad_2025-03-27T20-58-02.862Z.pdf",
+        "name": "documentos_CPLPMaiores-m8s0tpc7-679aceb9_2025-03-28T00-05-56.344Z.pdf",
         "documentType": "pdf_completo",
-        "uploadedAt": "2025-03-27T20:58:02.961Z"
-      }
-    ]
-  },
-  {
-    "processId": "ReagrupamentoTutor-m8ru5kjo-bf66a598",
-    "documentos": [
-      {
-        "path": "uploads/Reagrupamento/Tutor/ReagrupamentoTutor-m8ru5kjo-bf66a598/documentos/tutorTRFront_1743109118115.jpeg",
-        "type": "image/jpeg",
-        "size": 38418,
-        "name": "3.jpeg",
-        "documentType": "tutorTRFront",
-        "uploadedAt": "2025-03-27T20:58:38.130Z"
-      },
-      {
-        "path": "uploads/Reagrupamento/Tutor/ReagrupamentoTutor-m8ru5kjo-bf66a598/documentos/tutorTRBack_1743109118194.png",
-        "type": "image/png",
-        "size": 109706,
-        "name": "4.png",
-        "documentType": "tutorTRBack",
-        "uploadedAt": "2025-03-27T20:58:38.197Z"
-      },
-      {
-        "path": "uploads/Reagrupamento/Tutor/ReagrupamentoTutor-m8ru5kjo-bf66a598/documentos/minorPassport_1743109118226.png",
-        "type": "image/png",
-        "size": 318531,
-        "name": "passaporte_teste.png",
-        "documentType": "minorPassport",
-        "uploadedAt": "2025-03-27T20:58:38.232Z"
-      }
-    ],
-    "createdAt": "2025-03-27T20:58:38.134Z",
-    "updatedAt": "2025-03-27T20:58:38.233Z",
-    "campos": {
-      "documentos": {
-        "pessoaReagrupada": {
-          "nomeCompleto": "LELI005 unmes/ SURNAMES Forenamas PAULO",
-          "dataNascimento": "Não encontrado",
-          "nacionalidade": "AGO",
-          "numeroPassaporte": "Não encontrado",
-          "dataValidadePassaporte": "Não encontrado"
-        },
-        "pessoaQueRegrupa": {
-          "parentesco": "TUTOR",
-          "tipoDocumento": "TR",
-          "nomeCompleto": "Isabel Pedro",
-          "dataNascimento": "22/01/1987",
-          "nacionalidade": "AGO",
-          "numeroDocumento": "45P8P1529",
-          "dataValidade": "02/11/2024"
-        }
-      }
-    },
-    "arquivosUpload": [
-      {
-        "path": "uploads/Reagrupamento/Tutor/ReagrupamentoTutor-m8ru5kjo-bf66a598/pdfs/pdf_completo_1743109137388.pdf",
-        "type": "application/pdf",
-        "size": 1366932,
-        "name": "documentos_ReagrupamentoTutor-m8ru5kjo-bf66a598_2025-03-27T20-58-57.305Z.pdf",
-        "documentType": "pdf_completo",
-        "uploadedAt": "2025-03-27T20:58:57.391Z"
-      }
-    ]
-  },
-  {
-    "processId": "ReagrupamentoTutor-m8ruawh0-de8c928d",
-    "documentos": [
-      {
-        "path": "uploads/Reagrupamento/Tutor/ReagrupamentoTutor-m8ruawh0-de8c928d/documentos/tutorTRFront_1743109364366.jpeg",
-        "type": "image/jpeg",
-        "size": 38418,
-        "name": "3.jpeg",
-        "documentType": "tutorTRFront",
-        "uploadedAt": "2025-03-27T21:02:44.371Z"
-      },
-      {
-        "path": "uploads/Reagrupamento/Tutor/ReagrupamentoTutor-m8ruawh0-de8c928d/documentos/tutorTRBack_1743109364395.png",
-        "type": "image/png",
-        "size": 109706,
-        "name": "4.png",
-        "documentType": "tutorTRBack",
-        "uploadedAt": "2025-03-27T21:02:44.399Z"
-      },
-      {
-        "path": "uploads/Reagrupamento/Tutor/ReagrupamentoTutor-m8ruawh0-de8c928d/documentos/minorPassport_1743109364432.png",
-        "type": "image/png",
-        "size": 318531,
-        "name": "passaporte_teste.png",
-        "documentType": "minorPassport",
-        "uploadedAt": "2025-03-27T21:02:44.438Z"
-      }
-    ],
-    "createdAt": "2025-03-27T21:02:44.372Z",
-    "updatedAt": "2025-03-27T21:02:44.439Z",
-    "campos": {
-      "documentos": {
-        "pessoaReagrupada": {
-          "nomeCompleto": "MARCELINO SEBASTIÃO DIOGO",
-          "dataNascimento": "29/03/2006",
-          "nacionalidade": "ANGOLANA",
-          "numeroPassaporte": "N2792122",
-          "dataValidadePassaporte": "15/08/2032"
-        },
-        "pessoaQueRegrupa": {
-          "parentesco": "TUTOR",
-          "tipoDocumento": "TR",
-          "nomeCompleto": "ISABEL PEDRO PAULO",
-          "dataNascimento": "22/01/1987",
-          "nacionalidade": "AGO",
-          "numeroDocumento": "45P8P1529",
-          "dataValidade": "02/11/2024"
-        }
-      }
-    },
-    "arquivosUpload": [
-      {
-        "path": "uploads/Reagrupamento/Tutor/ReagrupamentoTutor-m8ruawh0-de8c928d/pdfs/pdf_completo_1743109393025.pdf",
-        "type": "application/pdf",
-        "size": 1366932,
-        "name": "documentos_ReagrupamentoTutor-m8ruawh0-de8c928d_2025-03-27T21-03-12.825Z.pdf",
-        "documentType": "pdf_completo",
-        "uploadedAt": "2025-03-27T21:03:13.027Z"
+        "uploadedAt": "2025-03-28T00:05:56.522Z"
       }
     ]
   }

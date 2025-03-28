@@ -55,13 +55,14 @@ export const CATEGORIAS_MAP = {
   'ConcessaoTR': 'Concessao',
   'ConcessaoTREstudante': 'Concessao',
   'ConcessaoTREstudanteMenor': 'Concessao',
-  'ReagrupamentoConjuge': 'Concessao',
-  'ReagrupamentoFilhoMenor': 'Concessao',
-  'ReagrupamentoFilho': 'Concessao',
-  'ReagrupamentoPaiMaeFora': 'Concessao',
-  'ReagrupamentoPaiIdoso': 'Concessao',
-  'ReagrupamentoPaiMaeIdoso': 'Concessao',
-  'ReagrupamentoTutor': 'Concessao',
+  // Reagrupamento - Corrigido para usar caminhos consistentes
+  'ReagrupamentoConjuge': 'Reagrupamento/Conjuge',
+  'ReagrupamentoFilhoMenor': 'Reagrupamento/Filho',
+  'ReagrupamentoFilho': 'Reagrupamento/Filho',
+  'ReagrupamentoPaiMaeFora': 'Reagrupamento/PaiMaeFora',
+  'ReagrupamentoPaiIdoso': 'Reagrupamento/PaiIdoso',
+  'ReagrupamentoPaiMaeIdoso': 'Reagrupamento/PaiIdoso',
+  'ReagrupamentoTutor': 'Reagrupamento/Tutor',
   // CPLP - Subcategorias
   'CPLPMaiores': 'CPLP',
   'CPLPMenor': 'CPLP',
@@ -74,12 +75,24 @@ export const CATEGORIAS_MAP = {
 
 // Função utilitária para normalizar categoria
 export const normalizarCategoria = (categoria) => {
-  // Forçar 'Concessao' para qualquer categoria que comece com 'Reagrupamento'
-  if (categoria.startsWith('Reagrupamento')) {
-    return 'Concessao';
+  // Verificar se temos um mapeamento definido para esta categoria
+  if (CATEGORIAS_MAP[categoria]) {
+    return CATEGORIAS_MAP[categoria];
   }
   
-  return CATEGORIAS_MAP[categoria] || categoria;
+  // Se for um tipo de Reagrupamento, usar o caminho padrão para garantir consistência
+  if (categoria.startsWith('Reagrupamento')) {
+    // Extrair o subtipo (por exemplo, de "ReagrupamentoFilho" extraímos "Filho")
+    const subtipo = categoria.replace('Reagrupamento', '');
+    if (subtipo) {
+      return `Reagrupamento/${subtipo}`;
+    }
+    // Se não conseguirmos extrair um subtipo, usar caminho padrão
+    return 'Reagrupamento/Outro';
+  }
+  
+  // Em último caso, retornar a própria categoria
+  return categoria;
 };
 
 export default {

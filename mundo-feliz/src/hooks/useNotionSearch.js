@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { logger } from '../services/LoggerService';
+import { databaseIds } from '../config/notionConfig';
 
 export function useNotionSearch() {
   const [query, setQuery] = useState('');
@@ -27,7 +28,7 @@ export function useNotionSearch() {
         },
         body: JSON.stringify({
           query: searchQuery,
-          databaseIds: window.databaseIds || [] // Usar databaseIds globais se disponíveis
+          databaseIds: databaseIds // Usar databaseIds importado em vez de window.databaseIds
         })
       });
 
@@ -85,4 +86,4 @@ export function useNotionSearch() {
     searchPeople,
     clearSearch
   };
-} 
+}

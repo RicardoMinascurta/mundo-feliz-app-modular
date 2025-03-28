@@ -9,7 +9,6 @@ import { Client } from '@notionhq/client';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { idGeneratorService } from './src/services/IdGeneratorService.js';
 import { databaseIds } from './src/config/notionConfig.js';
-import { getPeriodoFromDatabaseId } from './src/config/notionDatabasesInfo.js';
 import logger from './src/services/LoggerService.js';
 import signatureRoutes from './src/routes/signatureRoutes.js';
 import fileRoutes from './src/api/fileRoutes.js';
@@ -19,25 +18,9 @@ import sharp from 'sharp';
 import emailService from './src/services/emailService.js';
 import apiRoutes from './src/api/index.js';
 import dotenv from 'dotenv';
-import { NOTION_API_URL, NOTION_API_VERSION } from './src/config/serverConfig.js';
-import { categoriasMap, processToTemplateCategory, processoParaCategoriaTemplate } from './src/config/categoriasConfig.js';
-import { getProcessPath, ensureProcessFolders } from './src/utils/pathUtils.js';
-import { fetchWithRetry, consultarBaseNotion } from './src/utils/fetchUtils.js';
-import { saveBase64FileToUploads } from './src/utils/fileUtils.js';
-import { 
-  TIPOS_PROCESSO, 
-  TIPOS_DOCUMENTO, 
-  MINOR_PROCESS_TYPES, 
-  validarTipoProcessoEDocumento,
-  normalizeString,
-  isMinorProcess
-} from './src/config/processConfig.js';
 
 // Carregar variáveis de ambiente
 dotenv.config();
-
-// Definir a constante para a chave da API Notion
-const NOTION_API_KEY = process.env.NOTION_API_KEY;
 
 // Configurar variáveis de ambiente para OpenAI se não estiverem definidas
 if (!process.env.OPENAI_API_KEY) {
@@ -54,12 +37,220 @@ if (!process.env.OPENAI_MODEL) {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Definir um mapa de categorias para nomes de pastas
+const categoriasMap = {
+  'CPLP': 'CPLP',
+  'CPLPMaiores': 'CPLP/Maiores',
+  'CPLPMenor': 'CPLP/Menores',
+  'ConcessaoTR': 'Concessao/TR',
+  'ConcessaoTREstudante': 'Concessao/TREstudante',
+  'ConcessaoTREstudanteMenor': 'Concessao/TREstudanteMenor',
+  'Reagrupamento': 'Reagrupamento',
+  'ReagrupamentoFilho': 'Reagrupamento/Filho',
+  'ReagrupamentoConjuge': 'Reagrupamento/Conjuge',
+  'ReagrupamentoPaiIdoso': 'Reagrupamento/PaiIdoso',
+  'ReagrupamentoPaiMaeFora': 'Reagrupamento/PaiMaeFora',
+  'ReagrupamentoTutor': 'Reagrupamento/Tutor',
+  'RenovacaoEstudanteSuperior': 'Renovacao/EstudanteSuperior',
+  'RenovacaoEstudanteSecundario': 'Renovacao/EstudanteSecundario',
+  'RenovacaoTratamentoMedico': 'Renovacao/TratamentoMedico',
+  'RenovacaoNaoTemEstatuto': 'Renovacao/NaoTemEstatuto',
+  'RenovacaoUniaoEuropeia': 'Renovacao/UniaoEuropeia',
+  'InformacaoPortal': 'Informacao/Portal',
+  'InformacaoPresencial': 'Informacao/Presencial',
+  'ContagemTempo': 'Contagem/Tempo'
+};
+
+
+// Mapeamento de tipos de processo para categorias de template
+const processToTemplateCategory = {
+  // Concessão
+  'TR': 'concessao',
+  'TRNovo': 'concessao',
+  'TREstudante': 'concessao',
+  'TREstudante2': 'concessao',
+  'TREstudanteMenor': 'concessao',
+  'ConcessaoTR': 'concessao',
+  'ConcessaoTRNovo': 'concessao',
+  'ConcessaoTREstudante': 'concessao',
+  'ConcessaoTREstudante2': 'concessao',
+  'ConcessaoTREstudanteMenor': 'concessao',
+  
+  // Reagrupamento (usa templates de concessão)
+  'ReagrupamentoConjuge': 'concessao',
+  'ReagrupamentoFilho': 'concessao',
+  'ReagrupamentoPaiIdoso': 'concessao',
+  'ReagrupamentoTutor': 'concessao',
+  'ReagrupamentoPaiMaeFora': 'concessao',
+  
+  // CPLP
+  'CPLPMaiores': 'cplp',
+  'CPLPMenor': 'cplp',
+  
+  // Renovação
+  'RenovacaoEstudanteSuperior': 'renovacao',
+  'RenovacaoEstudanteSecundario': 'renovacao',
+  'RenovacaoTratamentoMedico': 'renovacao',
+  'RenovacaoNaoTemEstatuto': 'renovacao',
+  'RenovacaoUniaoEuropeia': 'renovacao',
+  'RenovacaoTitulo': 'renovacao',
+  'RenovacaoEstatuto': 'renovacao',
+  
+  // Contagem de tempo
+  'ContagemTempo': 'contagem',
+  
+  // Informação
+  'InformacaoPortal': 'infoportal',
+  'InfoPortal': 'infoportal',
+  'InformacaoPresencial': 'informacao',
+  'InfoPresencial': 'informacao',
+  
+  // Manifestação de interesse
+  'ManifestacaoInteresse': 'manifestacao',
+  
+  // Alias para corrigir problemas específicos
+  'c': 'cplp'
+};
+
+// Mapeamento explícito de tipo de processo para categoria do template de prompt
+const processoParaCategoriaTemplate = {
+  // Concessão
+  'TR': 'concessao',
+  'TRNovo': 'concessao',
+  'TREstudante': 'concessao',
+  'TREstudante2': 'concessao',
+  'TREstudanteMenor': 'concessao',
+  'ConcessaoTR': 'concessao',
+  'ConcessaoTRNovo': 'concessao',
+  'ConcessaoTREstudante': 'concessao'
+};
+
+// Função para obter o caminho padronizado do processo
+const getProcessPath = (processId) => {
+  // Extrair categoria do processId
+  const categoria = processId.split('-')[0] || 'desconhecido';
+  
+  // Mapear para a estrutura de pastas padronizada
+  const categoriaPasta = categoriasMap[categoria] || categoria;
+  console.log(`🔄 Geração de caminho para processId="${processId}", categoria="${categoria}", pasta="${categoriaPasta}"`);
+  
+  // Usar o mapa de categorias para criar caminho padronizado
+  return path.join(UPLOADS_DIR, categoriaPasta, processId);
+};
+
+// Função para garantir que a estrutura de pastas do processo existe
+const ensureProcessFolders = (processId) => {
+  const processBasePath = getProcessPath(processId);
+  const documentosPath = path.join(processBasePath, 'documentos');
+  const assinaturasPath = path.join(processBasePath, 'assinaturas');
+  const pdfsPath = path.join(processBasePath, 'pdfs');
+  
+  // Criar pastas se não existirem
+  if (!fs.existsSync(processBasePath)) {
+    fs.mkdirSync(processBasePath, { recursive: true });
+    console.log(`📁 Pasta base do processo criada: ${processBasePath}`);
+  }
+  
+  if (!fs.existsSync(documentosPath)) {
+    fs.mkdirSync(documentosPath, { recursive: true });
+    console.log(`📁 Pasta de documentos criada: ${documentosPath}`);
+  }
+  
+  if (!fs.existsSync(assinaturasPath)) {
+    fs.mkdirSync(assinaturasPath, { recursive: true });
+    console.log(`📁 Pasta de assinaturas criada: ${assinaturasPath}`);
+  }
+
+  if (!fs.existsSync(pdfsPath)) {
+    fs.mkdirSync(pdfsPath, { recursive: true });
+    console.log(`📁 Pasta de PDFs criada: ${pdfsPath}`);
+  }
+  
+  return {
+    basePath: processBasePath,
+    documentosPath,
+    assinaturasPath,
+    pdfsPath
+  };
+};
+
+// Função para mapear ID da base de dados para período (ano e mês)
+function getPeriodoFromDatabaseId(databaseId) {
+  if (!databaseId) return "Base de dados Notion";
+
+  // Remover traços do ID recebido para comparação
+  const cleanId = databaseId.replace(/-/g, "");
+  
+  // Mapeamento de IDs para meses e anos
+  const databasesInfo = [
+    // 2021
+    { id: "8b6d712de5da407fb204f5034d05d3cf", period: "Janeiro-Março 2021" },
+    { id: "f4aac6cf0061440aa8a15d171f35481d", period: "Abril 2021" },
+    { id: "ffe86444262143ebb5327dadb6c6e422", period: "Maio 2021" },
+    { id: "a93ce7a1f828451d93ce6298ab7f601a", period: "Junho 2021" },
+    { id: "6be267fb2d7f4fdc8b61f46eb2a0ebba", period: "Julho 2021" },
+    { id: "eed67eb3b69a442c9b4d8f86a4a6a4c9", period: "Agosto 2021" },
+    { id: "b9d7c317a930479ea80235c9828d73a2", period: "Setembro 2021" },
+    { id: "a2114ae7333d4067ba85b8a08bd0f583", period: "Outubro 2021" },
+    { id: "49cb2679a9cc4d25a632ed0a618b0fad", period: "Novembro 2021" },
+    { id: "cd874e807cf54a37ad8d61c8709e7256", period: "Dezembro 2021" },
+    
+    // 2022
+    { id: "0795f6df3b5f44ad8052ad2602874b70", period: "Janeiro 2022" },
+    { id: "2ce3a079d7204d00bf8ab575a8a01a4f", period: "Fevereiro 2022" },
+    { id: "86bcab16d040480ea078d279611b095e", period: "Março 2022" },
+    { id: "4d4c4b39978247cca674f6a28a0a06c3", period: "Abril 2022" },
+    { id: "d7f83bbaeb9e46f6aceacd13bad9842f", period: "Maio 2022" },
+    { id: "ae82827ab29c4a01aae60e74a746945b", period: "Junho 2022" },
+    { id: "9e3c3a49369541fa9d6cb815a1e9fcc5", period: "Julho 2022" },
+    { id: "42dcb22c5a8840e2b2941347f524d8d4", period: "Agosto 2022" },
+    { id: "611ee01166684638813037a78b8c4208", period: "Setembro 2022" },
+    { id: "ba7ca6a9a2e24a8392fee611a3b0dc40", period: "Outubro 2022" },
+    { id: "3b6c5e6ec5c54944b9fef3a1d801d57f", period: "Novembro 2022" },
+    { id: "d9fd1ab111a94993953c94f9afc41898", period: "Dezembro 2022" },
+    
+    // 2023
+    { id: "ad156a243eb94ad9a30044b90811d461", period: "Janeiro 2023" },
+    { id: "a6f8660748314e0dbbb3e71dfe11f906", period: "Fevereiro 2023" },
+    { id: "cf19ff4bccc7489a8aaddf4514c56c87", period: "Março 2023" },
+    { id: "8ae3d0e73979400dbe9016f5db2254e9", period: "Abril 2023" },
+    { id: "9d0cdb718788413cadcd77a3413572a7", period: "Maio 2023" },
+    { id: "92c675a9d97a47f1aa2772c91c6a1203", period: "Junho 2023" },
+    { id: "63a0957e6d2b4d1ba651997fea813a83", period: "Julho 2023" },
+    { id: "b5606e0bda6a40f08475dc2df03ab1d9", period: "Agosto 2023" },
+    { id: "93978b6147f047d89dff6ce0dd462afa", period: "Setembro 2023" },
+    { id: "2ecb741f56514dc58114a5a286809b3a", period: "Outubro 2023" },
+    { id: "9b684bf4ed324e5d9809d00128eb1455", period: "Novembro 2023" },
+    { id: "c4cf150b70db4f4f9238910ee9715e76", period: "Dezembro 2023" },
+    
+    // 2024
+    { id: "6329fa2e0a434d7091e59053fe560e7a", period: "Janeiro 2024" },
+    { id: "fd2cefc0a5f84c708076470071f6f17a", period: "Fevereiro 2024" },
+    { id: "0b37d324adde4f5e86d8efc0736f531e", period: "Março 2024" },
+    { id: "7ebba12b5dda4458af4732987429109e", period: "Abril 2024" },
+    { id: "461318efc57841b2892aa36f2e0a3a02", period: "Maio 2024" },
+    { id: "1582d34a36d54e9b96b115274bf7b1c8", period: "Junho 2024" },
+    { id: "ff297d66a67240a3b32587df8880eee0", period: "Julho 2024" },
+    { id: "55507a6e7d17441586b1d9ae2d3e736a", period: "Agosto 2024" },
+    { id: "3a8d43aa5d5c4380887f4be733375afc", period: "Setembro 2024" },
+    { id: "c95a892531e84370b9d08561b4505c04", period: "Outubro 2024" },
+    { id: "6c38a8cf8ba045bca17737c32b153332", period: "Novembro 2024" },
+    { id: "a1f3004dc4954440a0edccd977745323", period: "Dezembro 2024" }
+  ];
+  
+  // Procurar pelo ID sem traços
+  const dbInfo = databasesInfo.find(db => 
+    db.id.replace(/-/g, "") === cleanId
+  );
+  
+  console.log(`Buscando período para ID: ${databaseId}, ID limpo: ${cleanId}, Encontrado: ${dbInfo?.period || 'não encontrado'}`);
+  
+  return dbInfo ? dbInfo.period : "Base de dados Notion";
+}
+
 // Configurações do servidor Express
 const app = express();
 const PORT = 3001;
-const DATA_DIR = path.join(__dirname, 'data');
-const DATA_FILE = path.join(DATA_DIR, 'processos.json');
-const UPLOADS_DIR = path.join(__dirname, 'uploads');
 
 // Configurar CORS
 app.use(cors());
@@ -89,7 +280,7 @@ const storage = multer.diskStorage({
     }
     
     // Usar a função centralizada para criar o caminho padronizado
-    const processPath = getProcessPath(processId, UPLOADS_DIR);
+    const processPath = getProcessPath(processId);
     
     // Melhor detecção de uploads de assinatura:
     // 1. Verifica o document type (qualquer variante de 'assinatura')
@@ -225,6 +416,11 @@ app.post('/api/email/send', async (req, res) => {
   }
 });
 
+// Diretórios para dados e uploads
+const DATA_DIR = path.join(__dirname, 'data');
+const DATA_FILE = path.join(DATA_DIR, 'processos.json');
+const UPLOADS_DIR = path.join(__dirname, 'uploads');
+
 // Garantir que os diretórios de dados e uploads existam
 if (!fs.existsSync(DATA_DIR)) {
   console.log(`Criando diretório de dados: ${DATA_DIR}`);
@@ -274,6 +470,346 @@ async function getPromptTemplate(processType, documentType) {
   }
 }
 
+// Constantes para tipos de processo e documento
+const TIPOS_PROCESSO = {
+  CONCESSAO: 'concessao',
+  CONTAGEM: 'contagem'
+};
+
+const TIPOS_DOCUMENTO = {
+  CONCESSAO: ['TR', 'TR2', 'TREstudante', 'TREstudante2', 'TREstudanteMenor', 'ReagrupamentoConjuge', 'ReagrupamentoFilho', 'ReagrupamentoTutor'],
+  CONTAGEM: ['ContagemTempo', 'AnaliseDocumentos']
+};
+
+// Função para validar tipo de processo e documento
+function validarTipoProcessoEDocumento(tipoProcesso, tipoDocumento) {
+  // Verificar se o tipo de processo é válido
+  if (!Object.values(TIPOS_PROCESSO).includes(tipoProcesso)) {
+    return {
+      valido: false,
+      erro: `Tipo de processo inválido: ${tipoProcesso}. Tipos válidos: ${Object.values(TIPOS_PROCESSO).join(', ')}`
+    };
+  }
+
+  // Obter lista de tipos de documento válidos para o processo
+  const tiposDocumentoValidos = tipoProcesso === TIPOS_PROCESSO.CONCESSAO 
+    ? TIPOS_DOCUMENTO.CONCESSAO 
+    : TIPOS_DOCUMENTO.CONTAGEM;
+
+  // Verificar se o tipo de documento é válido para o processo
+  if (!tiposDocumentoValidos.includes(tipoDocumento)) {
+    return {
+      valido: false,
+      erro: `Tipo de documento inválido: ${tipoDocumento} para processo ${tipoProcesso}. Tipos válidos: ${tiposDocumentoValidos.join(', ')}`
+    };
+  }
+
+  return { valido: true };
+}
+
+// Função para salvar arquivo base64 no disco
+async function saveBase64FileToUploads(base64Data, processId, documentType, filename) {
+  try {
+    // Logs claros para debugar o caminho
+    console.log(`📄 Salvando arquivo para processId=${processId}, tipo=${documentType}, nome=${filename}`);
+    
+    // Usar a função padronizada para obter o caminho do processo
+    const processPath = getProcessPath(processId);
+    
+    // Melhor detecção de tipos de arquivo:
+    const isSignature = 
+      (documentType && documentType.toLowerCase().includes('assinatura')) || 
+      (filename && filename.toLowerCase().includes('assinatura'));
+    
+    const isPdf = 
+      (documentType && (documentType.toLowerCase().includes('pdf') || documentType === 'pdf_completo')) || 
+      (filename && filename.toLowerCase().endsWith('.pdf'));
+    
+    // Determinar a pasta para o tipo de documento
+    let tipoDocumentoPasta = 'documentos';
+    
+    if (isSignature) {
+      tipoDocumentoPasta = 'assinaturas';
+    } else if (isPdf) {
+      tipoDocumentoPasta = 'pdfs';
+    }
+    
+    console.log(`📂 Tipo do documento: ${documentType}, Nome: ${filename}`);
+    console.log(`📂 Determinado como: ${isSignature ? 'ASSINATURA' : (isPdf ? 'PDF' : 'DOCUMENTO')}`);
+    console.log(`📂 Salvando em pasta: ${tipoDocumentoPasta}`);
+    
+    const pastaDestino = path.join(processPath, tipoDocumentoPasta);
+    
+    // Garantir que a pasta existe
+    if (!fs.existsSync(pastaDestino)) {
+      fs.mkdirSync(pastaDestino, { recursive: true });
+      console.log(`📁 Pasta criada para arquivo: ${pastaDestino}`);
+    }
+    
+    // Extrair os dados da string base64
+    const matches = base64Data.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    
+    let tipo = 'application/octet-stream';
+    let dados;
+    
+    if (!matches || matches.length !== 3) {
+      console.log('⚠️ Formato base64 sem cabeçalho MIME, tentando processar apenas o conteúdo');
+      dados = Buffer.from(base64Data, 'base64');
+      
+      // Tentar determinar o tipo pela extensão
+      if (filename) {
+        const ext = filename.split('.').pop().toLowerCase();
+        if (ext === 'pdf') tipo = 'application/pdf';
+        else if (['png', 'jpg', 'jpeg', 'gif'].includes(ext)) {
+          tipo = `image/${ext === 'jpg' ? 'jpeg' : ext}`;
+        }
+      }
+    } else {
+      tipo = matches[1];
+      dados = Buffer.from(matches[2], 'base64');
+    }
+    
+    // Gerar nome de arquivo com timestamp
+    const timestamp = Date.now();
+    let ext = 'dat';
+    
+    if (filename) {
+      ext = filename.split('.').pop() || 'dat';
+    } else if (tipo === 'application/pdf') {
+      ext = 'pdf';
+    } else if (tipo.startsWith('image/')) {
+      ext = tipo.split('/')[1] === 'jpeg' ? 'jpg' : tipo.split('/')[1];
+    }
+    
+    const nomeArquivo = `${documentType}_${timestamp}.${ext}`;
+    const caminhoCompleto = path.join(pastaDestino, nomeArquivo);
+    
+    // Salvar arquivo
+    fs.writeFileSync(caminhoCompleto, dados);
+    console.log(`📄 Arquivo salvo em: ${caminhoCompleto}`);
+    
+    // Extrair categoria para o caminho relativo no JSON
+    const categoria = processId.split('-')[0] || 'desconhecido';
+    const categoriaPasta = categoriasMap[categoria] || categoria;
+    
+    // Retornar o caminho relativo (para armazenar no JSON)
+    return {
+      path: `uploads/${categoriaPasta}/${processId}/${tipoDocumentoPasta}/${nomeArquivo}`,
+      type: tipo,
+      size: dados.length
+    };
+  } catch (error) {
+    console.error('❌ Erro ao salvar arquivo:', error);
+    throw error;
+  }
+}
+
+// Endpoint para upload de documento via base64
+app.post('/api/upload-documento-base64', async (req, res) => {
+  try {
+    const { processId, documentType, base64Data, filename } = req.body;
+    
+    // Logging para depuração
+    console.log('[DEBUG] Recebido upload-documento-base64:');
+    console.log('- req.body:', {
+      temProcessId: !!processId,
+      temDocumentType: !!documentType,
+      temBase64Data: !!base64Data,
+      temFilename: !!filename
+    });
+    console.log('- Content-Type:', req.get('Content-Type'));
+      
+    if (!processId || !documentType || !base64Data) {
+      return res.status(400).json({
+        success: false,
+        error: 'processId, documentType e base64Data são obrigatórios'
+      });
+    }
+
+    console.log(`📤 API - Upload de documento base64: tipo=${documentType}, processId=${processId}`);
+    console.log(`📄 Salvando arquivo para processId=${processId}, tipo=${documentType}, nome=${filename}`);
+    
+    // Determinar a categoria e subcategoria
+    const categoria = processId.split('-')[0];
+    
+    // Obter a pasta correta para a categoria/tipo
+    const categoriaPasta = categoriasMap[categoria] || categoria;
+    
+    // Determinar se é um PDF, assinatura ou documento regular
+    let tipoPasta = 'documentos';
+    if (documentType.toLowerCase().includes('pdf') || (filename && filename.toLowerCase().endsWith('.pdf'))) {
+      tipoPasta = 'pdfs';
+      console.log(`📂 Determinado como: PDF`);
+    } else if (documentType.toLowerCase().includes('assinatura')) {
+      tipoPasta = 'assinaturas';
+      console.log(`📂 Determinado como: ASSINATURA`);
+    } else {
+      console.log(`📂 Determinado como: DOCUMENTO`);
+    }
+    
+    console.log(`📂 Tipo do documento: ${documentType}, Nome: ${filename}`);
+    console.log(`📂 Salvando em pasta: ${tipoPasta}`);
+    
+    // Criar a estrutura de pastas
+    await createProcessStructure(processId);
+    
+    // Gerar nome de arquivo único
+    const timestamp = Date.now();
+    const fileExt = filename ? path.extname(filename) : (documentType.toLowerCase().includes('pdf') ? '.pdf' : '.png');
+    const newFilename = `${documentType.replace(/\s+/g, '_')}_${timestamp}${fileExt}`;
+    
+    // Extrair dados base64
+    let base64Content = base64Data;
+    if (base64Data.includes(';base64,')) {
+      base64Content = base64Data.split(';base64,').pop();
+    }
+    
+    // Caminho completo do arquivo
+    const processPath = getProcessPath(processId);
+    const filePath = path.join(processPath, tipoPasta, newFilename);
+    
+    // Assegurar que o diretório existe
+    const dirPath = path.dirname(filePath);
+    if (!fs.existsSync(dirPath)) {
+      fs.mkdirSync(dirPath, { recursive: true });
+    }
+    
+    // Salvar o arquivo
+    fs.writeFileSync(filePath, base64Content, { encoding: 'base64' });
+    
+    // Determinar o tipo MIME baseado na extensão
+    let mimeType = 'application/octet-stream';
+    if (fileExt.toLowerCase() === '.pdf') {
+      mimeType = 'application/pdf';
+    } else if (['.png', '.jpg', '.jpeg', '.gif'].includes(fileExt.toLowerCase())) {
+      mimeType = `image/${fileExt.toLowerCase().replace('.', '')}`;
+      if (fileExt.toLowerCase() === '.jpg') mimeType = 'image/jpeg';
+    }
+    
+    // Obter tamanho do arquivo
+    const fileStats = fs.statSync(filePath);
+    const fileSize = fileStats.size;
+    
+    // Construir o caminho relativo para armazenamento no JSON
+    const relativePath = path.relative(path.resolve('.'), filePath).replace(/\\/g, '/');
+    
+    console.log(`✅ API - Upload concluído: ${filename || newFilename} para ${processId}`);
+    console.log(`📄 API - Informações do arquivo: ${JSON.stringify({
+      path: relativePath,
+      type: mimeType,
+      size: fileSize
+    })}`);
+    
+    // Adicionar ao JSON de processos
+    updateProcessoComArquivo(processId, {
+      path: relativePath,
+      type: mimeType,
+      size: fileSize,
+      name: filename || newFilename,
+      documentType,
+          uploadedAt: new Date().toISOString()
+    });
+    
+    // Resposta de sucesso
+    res.json({
+      success: true,
+      filePath: relativePath,
+      fileName: newFilename,
+      documentType,
+      type: mimeType,
+      size: fileSize
+    });
+  } catch (error) {
+    console.error(`❌ API - Erro ao processar upload base64: ${error.message}`, error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Endpoint para upload de PDF
+app.post('/api/upload-pdf', async (req, res) => {
+  try {
+    const { processId, base64Data, filename } = req.body;
+
+    // Validar parâmetros obrigatórios
+    if (!processId || !base64Data || !filename) {
+      return res.status(400).json({
+        success: false,
+        error: 'Parâmetros incompletos. Necessário: processId, base64Data, filename'
+      });
+    }
+
+    console.log(`📤 API - Upload de PDF: ${filename}, processId=${processId}`);
+
+    // Salvar o arquivo no disco (usamos "pdf_completo" como tipo de documento)
+    const fileInfo = await saveBase64FileToUploads(base64Data, processId, 'pdf_completo', filename);
+    
+    console.log(`✅ API - Upload de PDF concluído: ${filename} para ${processId}`);
+    console.log(`📄 API - Informações do PDF: ${JSON.stringify(fileInfo)}`);
+
+    // Atualizar o processo com o caminho do PDF
+    let processos = [];
+    let processoEncontrado = false;
+    
+    if (fs.existsSync(DATA_FILE)) {
+      try {
+        const fileContent = fs.readFileSync(DATA_FILE, 'utf8');
+        processos = JSON.parse(fileContent);
+        
+        // Encontrar o processo pelo ID exato
+        const index = processos.findIndex(p => p.processId === processId);
+        
+        if (index !== -1) {
+          processoEncontrado = true;
+          // Inicializar arquivosUpload se não existir
+          if (!processos[index].arquivosUpload) {
+            processos[index].arquivosUpload = [];
+          }
+          
+          // Adicionar informações do PDF ao processo
+          processos[index].arquivosUpload.push({
+            path: fileInfo.path,
+            type: fileInfo.type,
+            size: fileInfo.size,
+            name: filename,
+            documentType: 'pdf_completo',
+            uploadedAt: new Date().toISOString()
+          });
+          
+          // Atualizar o timestamp de última atualização
+          if (processos[index].timestamps) {
+            processos[index].timestamps.ultimaAtualizacao = new Date().toISOString();
+          }
+          
+          console.log(`📝 API - Processo atualizado com PDF: ${processId}`);
+          
+          // Salvar as alterações
+          fs.writeFileSync(DATA_FILE, JSON.stringify(processos, null, 2), 'utf8');
+        } else {
+          console.warn(`⚠️ API - Processo não encontrado para adicionar PDF: ${processId}`);
+        }
+      } catch (error) {
+        console.error(`❌ API - Erro ao processar arquivo JSON para PDF:`, error);
+      }
+    }
+    
+    // Retornar informações do arquivo
+    res.json({
+      success: true,
+      fileInfo: fileInfo
+    });
+    
+  } catch (error) {
+    console.error('❌ Erro ao fazer upload de PDF:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // Endpoint para obter todos os processos
 app.get('/api/processos/all', (req, res) => {
   try {
@@ -320,8 +856,31 @@ app.get('/api/pdf/com-nome/:processId', async (req, res) => {
     const processType = processId.split('-')[0];
     logger.info(`Tipo de processo identificado: ${processType}`);
     
-    // Verificar se é um processo de menor usando a função do módulo
-    const isMinor = isMinorProcess(processType);
+    // Verificar se é um processo de menor
+    const MINOR_PROCESS_TYPES = [
+      'RenovacaoEstudanteSecundario',
+      'ConcessaoTREstudanteMenor',
+      'ReagrupamentoTutor',
+      'CPLPMenor',
+      'Reagrupamento Familiar - Tutor',
+      'CPLP - Menor'
+    ];
+    
+    // Normalizar o tipo para comparação
+    const normalizeString = (str) => {
+      return str
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "") // Remove acentos
+        .replace(/[\s\-_]+/g, ""); // Remove espaços, traços e sublinhados
+    };
+    
+    const normalizedType = normalizeString(processType);
+    const normalizedTypes = MINOR_PROCESS_TYPES.map(normalizeString);
+    
+    const isMinor = normalizedTypes.some(type => 
+      normalizedType.includes(type) || type.includes(normalizedType)
+    );
     
     logger.info(`Verificação de processo de menor: ${isMinor ? 'SIM' : 'NÃO'}`);
     
@@ -393,7 +952,67 @@ app.get('/api/pdf/com-nome/:processId', async (req, res) => {
   }
 });
 
-// Endpoint de pesquisa do Notion
+// Função para fazer requisição com retry
+async function fetchWithRetry(url, options = {}, maxRetries = 3) {
+  const timeout = 30000; // 30 segundos de timeout
+  const backoff = 1000; // 1 segundo de backoff inicial
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+      return response;
+    } catch (error) {
+      if (attempt === maxRetries) throw error;
+      
+      // Espera com backoff exponencial
+      await new Promise(resolve => setTimeout(resolve, backoff * Math.pow(2, attempt - 1)));
+    }
+  }
+}
+
+// Função para consultar uma base do Notion
+async function consultarBaseNotion(databaseId, query) {
+  try {
+    const response = await fetchWithRetry(
+      `${NOTION_API_URL}/databases/${databaseId}/query`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${NOTION_API_KEY}`,
+          'Notion-Version': NOTION_API_VERSION,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          filter: {
+            property: 'Nome',
+            rich_text: {
+              contains: query
+            }
+          }
+        })
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Erro na resposta do Notion: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    logger.error(`Erro ao consultar base ${databaseId}:`, error);
+    return null;
+  }
+}
+
+// Modificar o endpoint de pesquisa do Notion
 app.post('/api/notion/search', async (req, res) => {
   try {
     const { query, databaseIds } = req.body;
@@ -406,7 +1025,7 @@ app.post('/api/notion/search', async (req, res) => {
 
     // Criar um array de promessas para todas as consultas
     const searchPromises = databaseIds.map(databaseId => 
-      consultarBaseNotion(databaseId, query, NOTION_API_KEY, NOTION_API_URL, NOTION_API_VERSION)
+      consultarBaseNotion(databaseId, query)
         .then(data => {
           if (data && data.results && data.results.length > 0) {
             return data.results.map(page => ({
@@ -441,7 +1060,7 @@ app.post('/api/notion/search', async (req, res) => {
   }
 });
 
-// Endpoint de detalhes da página
+// Modificar o endpoint de detalhes da página
 app.get('/api/notion/page/:pageId', async (req, res) => {
   try {
     const { pageId } = req.params;
@@ -522,7 +1141,7 @@ app.listen(PORT, () => {
 async function createProcessStructure(processId, processType) {
   try {
     // Usar a função getProcessPath para garantir consistência
-    const processPath = getProcessPath(processId, UPLOADS_DIR);
+    const processPath = getProcessPath(processId);
     const documentsPath = path.join(processPath, 'documentos');
     const assinaturasPath = path.join(processPath, 'assinaturas');
     const pdfsPath = path.join(processPath, 'pdfs');
@@ -605,6 +1224,280 @@ app.post('/api/create-process-structure', async (req, res) => {
   }
 }); 
 
+
+app.post('/api/gpt/extract', async (req, res) => {
+  try {
+    const { text, category, processType, processId, prompt } = req.body;
+    
+    if (!text || !processType) {
+      console.error('❌ API GPT - Parâmetros incompletos');
+      return res.status(400).json({
+        success: false,
+        error: 'Texto e tipo de processo são obrigatórios'
+      });
+    }
+    
+    // Usar o mapeamento explícito de categoria ou o valor fornecido
+    // Se category estiver vazio ou for inválido, usar o mapeamento
+    let normalizedCategory = category;
+    
+    if (!category || category.trim() === '' || category === 'c' || category === 'unknown') {
+      normalizedCategory = processToTemplateCategory[processType] || category || 'default';
+      console.log(`🔄 API GPT - Categoria não fornecida ou inválida, usando mapeamento: ${normalizedCategory}`);
+    }
+    
+    console.log(`🧠 API GPT - Processando texto para ${normalizedCategory}/${processType}, processo ${processId}`);
+    
+    // Analisar a estrutura do texto para log
+    let textSummary = '';
+    if (typeof text === 'string') {
+      textSummary = `String com ${text.length} caracteres`;
+    } else if (typeof text === 'object' && text !== null) {
+      if (text._combinedText) {
+        textSummary = `Objeto com texto combinado (${text._combinedText.length} caracteres) e ${Object.keys(text).length - 1} documentos`;
+      } else {
+        textSummary = `Objeto com ${Object.keys(text).length} documentos`;
+      }
+    }
+    console.log(`📄 API GPT - Tipo de texto recebido: ${textSummary}`);
+    
+    // Verificar e formatar o texto adequadamente
+    let textToProcess = '';
+    
+    if (typeof text === 'object' && text !== null) {
+      // Se temos um texto combinado preparado, usar
+      if (text._combinedText) {
+        textToProcess = text._combinedText;
+      } else {
+        // Criar formato correto manualmente
+        textToProcess = Object.entries(text)
+          .filter(([key]) => !key.startsWith('_')) // Ignorar campos com prefixo _
+          .map(([docType, docText]) => `${docType}\n${docText}`).join('\n\n');
+      }
+    } else if (typeof text === 'string') {
+      textToProcess = text;
+    } else {
+      return res.status(400).json({
+        success: false,
+        error: 'Formato de texto inválido'
+      });
+    }
+
+    // Obter o template de prompt adequado
+    let promptTemplate = null;
+    if (prompt) {
+      // Se um prompt personalizado foi fornecido, usar ele
+      promptTemplate = prompt;
+      console.log(`📝 API GPT - Usando prompt personalizado fornecido`);
+    } else {
+      // Caso contrário, tentar obter do sistema de templates
+      try {
+        promptTemplate = await getPromptTemplate(normalizedCategory, processType);
+        if (promptTemplate) {
+          console.log(`📝 API GPT - Template de prompt encontrado para ${normalizedCategory}/${processType}`);
+        } else {
+          console.log(`⚠️ API GPT - Nenhum template de prompt encontrado para ${normalizedCategory}/${processType}`);
+          // Usar um prompt genérico
+          promptTemplate = "Extraia as informações mais importantes deste documento.";
+        }
+      } catch (templateError) {
+        console.error(`❌ API GPT - Erro ao obter template:`, templateError);
+        promptTemplate = "Extraia as informações mais importantes deste documento.";
+      }
+    }
+
+    // Configurar a chamada para a API da OpenAI
+    console.log(`🔄 API GPT - Enviando para processamento usando OpenAI...`);
+    
+    // Verificar se temos uma chave API configurada
+    const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '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';
+    const MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+    
+    if (!OPENAI_API_KEY) {
+      throw new Error('API key da OpenAI não configurada');
+    }
+    
+    // Preparar prompt e contexto
+    const systemPrompt = promptTemplate.system || promptTemplate;
+    const userPrompt = textToProcess;
+    
+    // LOG DETALHADO DO PROMPT E TEXTO EXTRAÍDO
+    console.log('=== DETALHES COMPLETOS DO ENVIO PARA GPT ===');
+    console.log('== PROMPT SYSTEM ==');
+    console.log(systemPrompt);
+    console.log('== TEXTO EXTRAÍDO PELO AZURE (ENVIADO COMO USER PROMPT) ==');
+    console.log(userPrompt);
+    console.log('=== FIM DOS DETALHES ===');
+    
+    // Fazer a chamada para a API da OpenAI
+    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${OPENAI_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        temperature: 0.2
+      })
+    });
+    
+    if (!openaiResponse.ok) {
+      const errorData = await openaiResponse.json();
+      console.error(`❌ API GPT - Erro na API OpenAI:`, errorData);
+      throw new Error(`Erro na API OpenAI: ${errorData.error?.message || 'Erro desconhecido'}`);
+    }
+    
+    const openaiData = await openaiResponse.json();
+    
+    // Extrair e analisar a resposta
+    let responseContent = openaiData.choices[0]?.message?.content;
+    let gptResponseData = null;
+    
+    // Tentar extrair JSON da resposta
+    try {
+      // Verificar se a resposta é um objeto JSON diretamente
+      gptResponseData = JSON.parse(responseContent);
+      console.log(`✅ API GPT - Resposta JSON válida recebida`);
+    } catch (jsonError) {
+      // Tentar extrair JSON da string usando regex
+      console.warn(`⚠️ API GPT - Erro ao analisar JSON direto, tentando extrair bloco JSON...`);
+      
+      const jsonMatch = responseContent.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try {
+          gptResponseData = JSON.parse(jsonMatch[0]);
+          console.log(`✅ API GPT - JSON extraído com sucesso da resposta`);
+        } catch (innerJsonError) {
+          console.error(`❌ API GPT - Erro ao analisar JSON extraído:`, innerJsonError);
+          throw new Error('Formato de resposta inválido da OpenAI');
+        }
+      } else {
+        console.error(`❌ API GPT - Nenhum JSON encontrado na resposta`);
+        throw new Error('Formato de resposta inválido da OpenAI');
+      }
+    }
+    
+    // Criar objeto de resposta no formato esperado
+    const gptResponse = {
+      success: true,
+      data: gptResponseData,
+      rawResponse: openaiData,
+      promptUsed: systemPrompt
+    };
+    
+    // Função auxiliar para validar resposta do GPT
+    function validateGptResponse(data, requiredFields) {
+      if (!data || typeof data !== 'object') {
+        return { valid: false, reason: 'Dados inválidos', missingFields: [] };
+      }
+      
+      if (requiredFields.length === 0) {
+        return { valid: true, reason: 'Sem validação', missingFields: [] };
+      }
+      
+      const missingFields = [];
+      
+      for (const field of requiredFields) {
+        if (field.includes('.')) {
+          // Campo aninhado
+          const [parent, child] = field.split('.');
+          if (!data[parent] || data[parent][child] === undefined) {
+            missingFields.push(field);
+          }
+        } else if (data[field] === undefined) {
+          missingFields.push(field);
+        }
+      }
+      
+      return {
+        valid: missingFields.length === 0,
+        reason: missingFields.length > 0 ? 'Campos obrigatórios faltando' : 'OK',
+        missingFields
+      };
+    }
+
+    // Validar a resposta do GPT usando os campos obrigatórios do template
+    const requiredFields = promptTemplate.requiredFields || [];
+    const validationResult = validateGptResponse(gptResponse.data, requiredFields);
+    gptResponse.validation = validationResult;
+    
+    if (!validationResult.valid) {
+      console.warn(`⚠️ API GPT - Resposta inválida: ${validationResult.reason}`);
+      console.warn(`⚠️ API GPT - Campos faltantes: ${validationResult.missingFields.join(', ')}`);
+    }
+    
+    // Salvar os dados extraídos no registro do processo
+    if (processId && gptResponse.success) {
+      try {
+        let processos = [];
+        let processoEncontrado = false;
+        
+        if (fs.existsSync(DATA_FILE)) {
+          const fileContent = fs.readFileSync(DATA_FILE, 'utf8');
+          processos = JSON.parse(fileContent);
+          
+          // Encontrar o processo pelo ID
+          const index = processos.findIndex(p => p.processId === processId);
+          
+          if (index !== -1) {
+            processoEncontrado = true;
+            
+            // Inicializar campos.documentos se não existir
+            if (!processos[index].campos) {
+              processos[index].campos = {};
+            }
+            
+            if (!processos[index].campos.documentos) {
+              processos[index].campos.documentos = {};
+            }
+            
+            // Adicionar ou atualizar as informações extraídas
+            processos[index].campos.documentos = {
+              ...processos[index].campos.documentos,
+              ...gptResponse.data
+            };
+            
+            // Atualizar o timestamp de última atualização
+            if (processos[index].timestamps) {
+              processos[index].timestamps.ultimaAtualizacao = new Date().toISOString();
+            }
+            
+            console.log(`✅ API GPT - Processo ${processId} atualizado com dados extraídos`);
+            
+            // Salvar as alterações
+            fs.writeFileSync(DATA_FILE, JSON.stringify(processos, null, 2), 'utf8');
+          } else {
+            console.warn(`⚠️ API GPT - Processo ${processId} não encontrado no JSON`);
+          }
+        }
+      } catch (error) {
+        console.error(`❌ API GPT - Erro ao salvar dados extraídos:`, error);
+      }
+    }
+    
+    // Retornar a resposta
+    console.log(`✅ API GPT - Processamento concluído com sucesso`);
+    res.json({
+      success: true,
+      data: gptResponse.data,
+      validation: validationResult,
+      promptUsed: systemPrompt
+    });
+    
+  } catch (error) {
+    console.error('❌ API GPT - Erro na extração:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro na extração: ' + error.message
+    });
+  }
+});
+
 // Endpoint para upload de assinatura usando multer
 app.post('/api/upload-assinatura-file', upload.single('file'), async (req, res) => {
   console.log('[DEBUG] Recebido upload-assinatura-file:', {
@@ -645,7 +1538,7 @@ app.post('/api/upload-assinatura-file', upload.single('file'), async (req, res) 
     console.log(`📤 API - Upload de assinatura: processId=${processId}, arquivo=${file.originalname}`);
 
     // Usar a função padronizada para obter caminho do processo
-    const processPath = getProcessPath(processId, UPLOADS_DIR);
+    const processPath = getProcessPath(processId);
     const assinaturasPath = path.join(processPath, 'assinaturas');
     
     // Garantir que a pasta existe
@@ -818,7 +1711,7 @@ app.post('/api/file-upload', upload.single('file'), async (req, res) => {
     // Seguir o mesmo processo do endpoint principal
     try {
       // Usar a função padronizada para obter caminho do processo
-      const processPath = getProcessPath(processId, UPLOADS_DIR);
+      const processPath = getProcessPath(processId);
       
       // Melhor detecção de uploads de assinatura:
       const isSignature = 
@@ -1003,7 +1896,7 @@ app.post('/api/process-signature', async (req, res) => {
       }
       
       // Usar a função padronizada para obter caminho do processo
-      const processPath = getProcessPath(processId, UPLOADS_DIR);
+      const processPath = getProcessPath(processId);
       const assinaturaDir = path.join(processPath, 'assinaturas');
       
       // Garantir que a pasta existe
@@ -1135,6 +2028,105 @@ app.post('/api/process-signature', async (req, res) => {
   }
 }); 
 
+// Endpoint para listar estrutura de pastas de um processo
+app.get('/api/structure/:processId', (req, res) => {
+  try {
+    const { processId } = req.params;
+    
+    if (!processId) {
+      return res.status(400).json({
+        success: false,
+        error: 'ID do processo é necessário'
+      });
+    }
+    
+    // Usar a função padronizada para obter o caminho do processo
+    const processPath = getProcessPath(processId);
+    console.log(`🔍 Verificando estrutura para processo ${processId}`);
+    
+    // Verificar se a pasta existe
+    if (!fs.existsSync(processPath)) {
+      console.log(`⚠️ Estrutura de pastas não encontrada para ${processId}`);
+      
+      // Criar a estrutura quando solicitada (opcional, pode remover ou manter)
+      const { basePath, documentosPath, assinaturasPath } = ensureProcessFolders(processId);
+      
+      return res.json({
+        success: true,
+        message: 'Estrutura de pastas criada',
+        processId,
+        paths: {
+          basePath,
+          documentosPath,
+          assinaturasPath
+        },
+        exists: false,
+        created: true
+      });
+    }
+    
+    // Verificar existência das pastas principais
+    const documentosPath = path.join(processPath, 'documentos');
+    const assinaturasPath = path.join(processPath, 'assinaturas');
+    
+    const documentosExists = fs.existsSync(documentosPath);
+    const assinaturasExists = fs.existsSync(assinaturasPath);
+    
+    // Se alguma pasta não existe, criá-la
+    if (!documentosExists) {
+      fs.mkdirSync(documentosPath, { recursive: true });
+    }
+    
+    if (!assinaturasExists) {
+      fs.mkdirSync(assinaturasPath, { recursive: true });
+    }
+    
+    // Obter lista de arquivos em cada pasta
+    let documentos = [];
+    let assinaturas = [];
+    
+    if (documentosExists || !documentosExists) {
+      try {
+        documentos = fs.readdirSync(documentosPath);
+      } catch (error) {
+        console.error(`Erro ao ler pasta de documentos: ${error.message}`);
+      }
+    }
+    
+    if (assinaturasExists || !assinaturasExists) {
+      try {
+        assinaturas = fs.readdirSync(assinaturasPath);
+      } catch (error) {
+        console.error(`Erro ao ler pasta de assinaturas: ${error.message}`);
+      }
+    }
+    
+    // Retornar a estrutura de pastas do processo
+    res.json({
+      success: true,
+      processId,
+      paths: {
+        basePath: processPath,
+        documentosPath,
+        assinaturasPath
+      },
+      exists: true,
+      documentosExists: documentosExists || !documentosExists, // Agora deve ser sempre true
+      assinaturasExists: assinaturasExists || !assinaturasExists, // Agora deve ser sempre true
+      files: {
+        documentos,
+        assinaturas
+      }
+    });
+  } catch (error) {
+    console.error(`❌ Erro ao verificar estrutura: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+}); 
+
 // Função auxiliar para obter processos do arquivo JSON
 function getProcessos() {
   try {
@@ -1185,7 +2177,7 @@ app.get('/api/pdf/generate/:processId', async (req, res) => {
     }
     
     // Caminho base do processo
-    const processPath = getProcessPath(processId, UPLOADS_DIR);
+    const processPath = getProcessPath(processId);
     
     // Determinar se deve ir para pasta de assinaturas ou documentos
     const documentType = 'pdf_completo';
@@ -1408,6 +2400,91 @@ app.get('/api/processos/:processId', (req, res) => {
   }
 });
 
+// Endpoint para receber e salvar PDF enviado pelo cliente
+app.post('/api/upload-pdf', (req, res) => {
+  try {
+    const { processId, base64Data, filename, path } = req.body;
+    
+    if (!processId || !base64Data) {
+      return res.status(400).json({
+        success: false,
+        error: 'processId e base64Data são obrigatórios'
+      });
+    }
+    
+    console.log(`📄 API - Recebendo PDF para o processo: ${processId}`);
+    
+    // Obter o caminho base do processo
+    const processPath = getProcessPath(processId);
+    const pdfsFolderPath = `${processPath}/pdfs`;
+    
+    // Garantir que a pasta de PDFs existe
+    if (!fs.existsSync(pdfsFolderPath)) {
+      fs.mkdirSync(pdfsFolderPath, { recursive: true });
+      console.log(`📁 API - Pasta de PDFs criada: ${pdfsFolderPath}`);
+    }
+    
+    // Definir o caminho completo do arquivo
+    const pdfFileName = filename || `documentos_${processId}_${Date.now()}.pdf`;
+    const pdfFilePath = `${pdfsFolderPath}/${pdfFileName}`;
+    
+    console.log(`💾 API - Salvando PDF em: ${pdfFilePath}`);
+    
+    // Extrair os dados do base64
+    let base64Content = base64Data;
+    if (base64Content.includes(';base64,')) {
+      base64Content = base64Content.split(';base64,').pop();
+    }
+    
+    // Escrever o arquivo
+    fs.writeFileSync(pdfFilePath, base64Content, { encoding: 'base64' });
+    
+    console.log(`✅ API - PDF salvo com sucesso em pdfs: ${pdfFilePath}`);
+    
+    // Agora, atualizar os dados do processo
+    const processos = getProcessos();
+    const processoIndex = processos.findIndex(p => p.processId === processId);
+    
+    if (processoIndex >= 0) {
+      // Processo existe, atualizar
+      if (!processos[processoIndex].pdfGerados) {
+        processos[processoIndex].pdfGerados = [];
+      }
+      
+      // Adicionar informações do novo PDF
+      processos[processoIndex].pdfGerados.push({
+        path: pdfFilePath,
+        type: 'application/pdf',
+        size: fs.statSync(pdfFilePath).size,
+        name: pdfFileName,
+        documentType: 'pdf_completo',
+        uploadedAt: new Date().toISOString()
+      });
+      
+      // Salvar de volta no arquivo
+      fs.writeFileSync(DATA_FILE, JSON.stringify(processos, null, 2));
+      console.log(`🔄 API - Dados do processo atualizados com o novo PDF`);
+    } else {
+      console.log(`⚠️ API - Processo não encontrado para atualização: ${processId}`);
+    }
+    
+    // Responder com sucesso
+    res.json({
+      success: true,
+      fileInfo: {
+        path: pdfFilePath,
+        size: fs.statSync(pdfFilePath).size
+      }
+    });
+  } catch (error) {
+    console.error(`❌ API - Erro ao salvar PDF: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      error: `Erro ao salvar PDF: ${error.message}`
+    });
+  }
+}); 
+
 // Função para atualizar os dados do processo com informações de um novo arquivo
 function updateProcessoComArquivo(processId, fileInfo) {
   try {
@@ -1453,6 +2530,64 @@ function updateProcessoComArquivo(processId, fileInfo) {
   }
 }
 
+// Endpoint para upload de documento via formulário comum
+app.post('/api/upload-documento', upload.single('documento'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        error: 'Nenhum arquivo enviado'
+      });
+    }
+    
+    // Obter informações do arquivo e processId
+    const { processId, documentType } = req.body;
+    const file = req.file;
+    
+    // Verificar se temos um processId
+    if (!processId) {
+      return res.status(400).json({
+        success: false,
+        error: 'processId é obrigatório'
+      });
+    }
+    
+    console.log(`📤 API - Upload de documento: tipo=${documentType || 'não especificado'}, processId=${processId}`);
+    console.log(`📄 API - Arquivo recebido: ${file.originalname}, tamanho: ${file.size} bytes`);
+    
+    // Obter o caminho relativo do arquivo (para armazenar no JSON)
+    const relativePath = path.relative(path.resolve('.'), file.path).replace(/\\/g, '/');
+    
+    // Determinar o tipo MIME baseado na extensão
+    let mimeType = file.mimetype || 'application/octet-stream';
+    
+    // Registrar o arquivo no processo
+    const fileInfo = {
+      path: relativePath,
+      type: mimeType,
+      size: file.size,
+      name: file.originalname,
+      documentType: documentType || path.basename(file.originalname, path.extname(file.originalname)),
+      uploadedAt: new Date().toISOString()
+    };
+    
+    // Atualizar o JSON do processo
+    updateProcessoComArquivo(processId, fileInfo);
+    
+    // Resposta de sucesso
+    res.json({
+      success: true,
+      file: fileInfo
+    });
+  } catch (error) {
+    console.error(`❌ API - Erro ao processar upload de documento: ${error.message}`, error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // Endpoint para mesclar PDF com declaração de consentimento
 app.post('/api/merge-pdf-with-consent', async (req, res) => {
   try {
@@ -1492,3 +2627,85 @@ app.post('/api/merge-pdf-with-consent', async (req, res) => {
   }
 });
 
+app.post('/api/save-pdf', async (req, res) => {
+  try {
+    const { pdfData, processId, tipo } = req.body;
+    
+    if (!pdfData || !processId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Dados do PDF e ID do processo são obrigatórios'
+      });
+    }
+    
+    // Decodificar o base64 do PDF
+    const pdfBinary = Buffer.from(pdfData.replace(/^data:application\/pdf;base64,/, ''), 'base64');
+    
+    // Criar pastas se necessário
+    const { basePath, pdfsPath } = ensureProcessFolders(processId);
+    
+    // Definir nome do arquivo
+    const filename = `${processId}-${tipo || 'documento'}.pdf`;
+    const pdfPath = path.join(pdfsPath, filename);
+    
+    // Salvar o arquivo
+    fs.writeFileSync(pdfPath, pdfBinary);
+    
+    console.log(`✅ PDF salvo com sucesso: ${pdfPath}`);
+    
+    // Atualizar registro do processo com info do PDF
+    if (fs.existsSync(DATA_FILE)) {
+      try {
+        const fileContent = fs.readFileSync(DATA_FILE, 'utf8');
+        const processos = JSON.parse(fileContent);
+        
+        // Encontrar o processo pelo ID
+        const index = processos.findIndex(p => p.processId === processId);
+        
+        if (index !== -1) {
+          // Inicializar documentos se não existir
+          if (!processos[index].documentos) {
+            processos[index].documentos = {};
+          }
+          
+          // Adicionar o PDF à lista de documentos
+          processos[index].documentos[tipo || 'documento'] = {
+            path: pdfPath,
+            filename,
+            dateCreated: new Date().toISOString(),
+            fileType: 'application/pdf',
+            fileSize: pdfBinary.length
+          };
+          
+          // Atualizar data de modificação
+          if (processos[index].timestamps) {
+            processos[index].timestamps.ultimaAtualizacao = new Date().toISOString();
+          }
+          
+          // Salvar as alterações
+          fs.writeFileSync(DATA_FILE, JSON.stringify(processos, null, 2));
+          console.log(`✅ Registro do processo atualizado com informação do PDF`);
+        }
+      } catch (error) {
+        console.error(`❌ Erro ao atualizar registro do processo: ${error.message}`);
+        // Continuar mesmo com erro no registro
+      }
+    }
+    
+    // Enviar resposta positiva
+    res.json({
+      success: true,
+      filename,
+      path: pdfPath,
+      message: 'PDF salvo com sucesso'
+    });
+  } catch (error) {
+    console.error('❌ Erro ao salvar PDF:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+}); 
+
+// ... remaining existing code after app.post('/api/gpt/extract') endpoint ...

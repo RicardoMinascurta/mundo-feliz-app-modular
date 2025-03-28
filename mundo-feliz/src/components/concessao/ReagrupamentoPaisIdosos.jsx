@@ -46,14 +46,64 @@ const ReagrupamentoPaisIdosos = ({ selectedPerson, onBack, onSuccess }) => {
   const [processResult, setProcessResult] = useState(null);
   const [processError, setProcessError] = useState(null);
 
+  // Nova função para gerar processId consistente, similar ao CPLPMaiores
+  const gerarProcessId = async () => {
+    const formatoValido = processId && /^[A-Za-z]+-[a-z0-9]+-[0-9a-f]+$/.test(processId);
+    
+    if (formatoValido) {
+      console.log(`Usando ID de processo existente (válido): ${processId}`);
+      return processId;
+    }
+    
+    console.log('Tentando gerar novo ID com formato correto...');
+      
+    try {
+      // Em vez de chamar a API, vamos gerar localmente
+      const timestamp = new Date().toISOString().replace(/[-:.TZ]/g, "").substring(0, 8);
+      const randomHex = Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
+      const novoId = `ReagrupamentoPaiIdoso-${timestamp}-${randomHex}`;
+      
+      console.log(`Novo processo ID gerado localmente: ${novoId}`);
+      setProcessId(novoId);
+      
+      if (navigate && !window.location.pathname.includes(novoId)) {
+        const currentPath = window.location.pathname;
+        let newPath;
+        
+        if (currentPath.endsWith('/')) {
+          newPath = `${currentPath}${novoId}`;
+        } else {
+          const parts = currentPath.split('/');
+          
+          const lastPart = parts[parts.length - 1];
+          if (lastPart && lastPart.includes('-')) {
+            parts[parts.length - 1] = novoId;
+            newPath = parts.join('/');
+          } else {
+            newPath = `${currentPath}/${novoId}`;
+          }
+        }
+        
+        navigate(newPath, { replace: true });
+      }
+      
+      return novoId;
+    } catch (error) {
+      console.error('Erro ao gerar processId:', error);
+      setProcessError('Não foi possível iniciar o processo. Tente novamente.');
+      return null;
+    }
+  };
+
   useEffect(() => {
     const initializeProcess = async () => {
       try {
-        // Garantir um ID de processo válido ao inicializar
-        const validProcessId = await ensureValidProcessId();
+        // Usar a nova função gerarProcessId em vez de ensureValidProcessId
+        const validProcessId = await gerarProcessId();
+        console.log(`ProcessId atualizado no componente: ${validProcessId}`);
+        
         if (validProcessId) {
-          console.log(`ProcessId válido inicializado: ${validProcessId}`);
-          setProcessId(validProcessId);
+          console.log(`Upload habilitado com ID válido: ${validProcessId}`);
         }
       } catch (error) {
         console.error('Erro ao inicializar processo:', error);
@@ -79,8 +129,8 @@ const ReagrupamentoPaisIdosos = ({ selectedPerson, onBack, onSuccess }) => {
   };
 
   const handleSubmit = async () => {
-    // Garantir que temos um ID de processo válido antes de submeter
-    const validProcessId = await ensureValidProcessId();
+    // Usar gerarProcessId em vez de ensureValidProcessId
+    const validProcessId = await gerarProcessId();
     if (!validProcessId) {
       setProcessError('ID do processo não disponível. Tente recarregar a página.');
       return;
@@ -234,7 +284,7 @@ const ReagrupamentoPaisIdosos = ({ selectedPerson, onBack, onSuccess }) => {
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
           <Typography variant="h5" sx={{ flexGrow: 1 }}>
             <ElderlyIcon sx={{ mr: 1, verticalAlign: 'middle', color: '#1976d2' }} />
-            Reagrupamento Familiar - Para Pais Idosos (+65)
+            Reagrupamento Familiar - Pais Idosos
           </Typography>
         </Box>
         
@@ -245,7 +295,7 @@ const ReagrupamentoPaisIdosos = ({ selectedPerson, onBack, onSuccess }) => {
         )}
         
         <Typography variant="body1" paragraph sx={{ color: 'text.secondary' }}>
-          Por favor, carregue os documentos necessários para o reagrupamento familiar para pais idosos.
+          Por favor, carregue os documentos necessários para o reagrupamento familiar de pais idosos.
         </Typography>
         
         <Grid container spacing={2}>
@@ -273,23 +323,12 @@ const ReagrupamentoPaisIdosos = ({ selectedPerson, onBack, onSuccess }) => {
           
           <Grid item xs={12}>
             <DocumentUploader
-              label="Passaporte do Pai Idoso"
+              label="Passaporte do Pai/Mãe Idoso"
               required={true}
               onFileSelected={(file) => handleFileSelected('elderlyParentPassport', file)}
               fileUploaded={uploadState.documents.elderlyParentPassport?.uploaded}
               error={uploadState.documents.elderlyParentPassport?.error}
               errorMessage={uploadState.documents.elderlyParentPassport?.errorMessage}
-            />
-          </Grid>
-          
-          <Grid item xs={12} md={6}>
-            <DocumentUploader
-              label="Comprovativo de Reforma (opcional)"
-              required={false}
-              onFileSelected={(file) => handleFileSelected('retirementProof', file)}
-              fileUploaded={uploadState.documents.retirementProof?.uploaded}
-              error={uploadState.documents.retirementProof?.error}
-              errorMessage={uploadState.documents.retirementProof?.errorMessage}
             />
           </Grid>
           

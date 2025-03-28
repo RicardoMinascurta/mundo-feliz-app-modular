@@ -36,8 +36,7 @@ const ContagemTempo = ({ selectedPerson, onBack, onSuccess }) => {
     setDocumentError,
     submitDocuments,
     processDocuments,
-    processId: useUploadProcessId,
-    ensureValidProcessId
+    processId: useUploadProcessId
   } = useUpload(
     uploadService, 
     'Contagem de Tempo para Residência Permanente', 
@@ -51,6 +50,56 @@ const ContagemTempo = ({ selectedPerson, onBack, onSuccess }) => {
   const [personData, setPersonData] = useState(null);
   const [personName, setPersonName] = useState('');
 
+  // Função para verificar o formato do ID e gerar um novo se necessário
+  const gerarProcessId = async () => {
+    // Verificar se o ID atual existe e se está no formato correto
+    const formatoValido = processId && /^[A-Za-z]+-\d+-[0-9a-f]+$/.test(processId);
+    
+    if (formatoValido) {
+      console.log(`Usando ID de processo existente (válido): ${processId}`);
+      return processId;
+    }
+    
+    console.log('Tentando gerar novo ID com formato correto...');
+      
+    try {
+      // Em vez de chamar a API, vamos gerar localmente
+      const timestamp = new Date().toISOString().replace(/[-:.TZ]/g, "").substring(0, 8);
+      const randomHex = Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
+      const novoId = `ContagemTempo-${timestamp}-${randomHex}`;
+      
+      console.log(`Novo processo ID gerado localmente: ${novoId}`);
+      setProcessId(novoId);
+      
+      if (navigate && !window.location.pathname.includes(novoId)) {
+        const currentPath = window.location.pathname;
+        let newPath;
+        
+        if (currentPath.endsWith('/')) {
+          newPath = `${currentPath}${novoId}`;
+        } else {
+          const parts = currentPath.split('/');
+          
+          const lastPart = parts[parts.length - 1];
+          if (lastPart && lastPart.includes('-')) {
+            parts[parts.length - 1] = novoId;
+            newPath = parts.join('/');
+          } else {
+            newPath = `${currentPath}/${novoId}`;
+          }
+        }
+        
+        navigate(newPath, { replace: true });
+      }
+      
+      return novoId;
+    } catch (error) {
+      console.error('Erro ao gerar processId:', error);
+      setProcessError('Não foi possível iniciar o processo. Tente novamente.');
+      return null;
+    }
+  };
+
   useEffect(() => {
     const fetchPersonData = async () => {
       if (selectedPerson && selectedPerson.id) {
@@ -60,12 +109,11 @@ const ContagemTempo = ({ selectedPerson, onBack, onSuccess }) => {
           setPersonData(data);
           setPersonName(data.nome || selectedPerson.title || 'Nome não disponível');
           
-          // Gerar ou validar o ID do processo usando o hook
-          const validProcessId = await ensureValidProcessId();
+          // Gerar ou validar o ID do processo usando nossa função personalizada
+          const validProcessId = await gerarProcessId();
           console.log(`ProcessId atualizado no componente: ${validProcessId}`);
           
           if (validProcessId) {
-            setProcessId(validProcessId);
             console.log(`Upload habilitado com ID válido: ${validProcessId}`);
           }
         } catch (error) {
@@ -74,12 +122,12 @@ const ContagemTempo = ({ selectedPerson, onBack, onSuccess }) => {
         }
       } else {
         // Mesmo sem dados da pessoa, precisamos de um ID válido
-        await ensureValidProcessId();
+        await gerarProcessId();
       }
     };
     
     fetchPersonData();
-  }, [selectedPerson, ensureValidProcessId, setProcessId]);
+  }, [selectedPerson]);
 
   const handleFileSelected = async (fieldName, file) => {
     try {
@@ -97,7 +145,7 @@ const ContagemTempo = ({ selectedPerson, onBack, onSuccess }) => {
 
   const handleSubmit = async () => {
     // Garantir que temos um ID de processo válido antes de submeter
-    const validProcessId = await ensureValidProcessId();
+    const validProcessId = await gerarProcessId();
     if (!validProcessId) {
       setProcessError('ID do processo não disponível. Tente recarregar a página.');
       return;

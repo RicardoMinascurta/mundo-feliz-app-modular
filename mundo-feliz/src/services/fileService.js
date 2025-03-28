@@ -41,13 +41,13 @@ export async function saveBase64FileToUploads(base64Data, processId, documentTyp
       'ConcessaoTREstudante': 'Concessao',
       'ConcessaoTREstudante2': 'Concessao',
       'ConcessaoTREstudanteMenor': 'Concessao',
-      'ReagrupamentoConjuge': 'Concessao',
-      'ReagrupamentoFilhoMenor': 'Concessao',
-      'ReagrupamentoFilho': 'Concessao',
-      'ReagrupamentoPaiMaeFora': 'Concessao',
-      'ReagrupamentoPaiIdoso': 'Concessao',
-      'ReagrupamentoPaiMaeIdoso': 'Concessao',
-      'ReagrupamentoTutor': 'Concessao',
+      'ReagrupamentoConjuge': 'Reagrupamento/Conjuge',
+      'ReagrupamentoFilhoMenor': 'Reagrupamento/Filho',
+      'ReagrupamentoFilho': 'Reagrupamento/Filho',
+      'ReagrupamentoPaiMaeFora': 'Reagrupamento/PaiMaeFora',
+      'ReagrupamentoPaiIdoso': 'Reagrupamento/PaiIdoso',
+      'ReagrupamentoPaiMaeIdoso': 'Reagrupamento/PaiIdoso',
+      'ReagrupamentoTutor': 'Reagrupamento/Tutor',
       // CPLP - Subcategorias
       'CPLPMaiores': 'CPLP',
       'CPLPMenor': 'CPLP',
@@ -60,12 +60,6 @@ export async function saveBase64FileToUploads(base64Data, processId, documentTyp
     
     // Obter categoria normalizada ou usar a original se não estiver mapeada
     let categoriaNormalizada = categoriasMap[categoria] || categoria;
-    
-    // Forçar 'Concessao' para qualquer categoria que comece com 'Reagrupamento'
-    if (categoria.startsWith('Reagrupamento')) {
-      categoriaNormalizada = 'Concessao';
-      console.log(`🔄 Forçando categoria normalizada para Reagrupamento: ${categoriaNormalizada}`);
-    }
     
     // Log da categoria normalizada
     console.log(`📁 Categoria normalizada: ${categoriaNormalizada}`);
@@ -83,9 +77,16 @@ export async function saveBase64FileToUploads(base64Data, processId, documentTyp
       basePath = path.join(categoriaNormalizada, subcategoria, processId);
       console.log(`Tipo Concessao: subcategoria=${subcategoria}`);
     } else if (categoria.startsWith('Reagrupamento')) {
-      subcategoria = categoria;
-      basePath = path.join('Concessao', subcategoria, processId);
-      console.log(`🔍 Para Reagrupamento: categoria=${categoria}, basePath=${basePath}`);
+      // Usar diretamente a categoria normalizada que já contém o caminho completo (Reagrupamento/Tipo)
+      const partes = categoriaNormalizada.split('/');
+      if (partes.length === 2) {
+        basePath = path.join(partes[0], partes[1], processId);
+        console.log(`🔍 Para Reagrupamento: categoria=${categoria}, basePath=${basePath}`);
+      } else {
+        // Fallback, caso algo inesperado ocorra com o mapeamento
+        basePath = path.join('Reagrupamento', 'Filho', processId);
+        console.log(`⚠️ Fallback para Reagrupamento: ${basePath}`);
+      }
     } else if (categoria === 'CPLPMenor') {
       // Tratamento especial para CPLPMenor para garantir o caminho correto
       basePath = path.join('CPLP', 'Menores', processId);
